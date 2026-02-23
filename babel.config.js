@@ -10,7 +10,7 @@ module.exports = function (api) {
           config: './tamagui.config.ts',
         },
       ],
-      'react-native-reanimated/plugin', // Este ahora funcionará bien
+      'react-native-reanimated/plugin',
     ],
   };
 };

@@ -1,18 +1,30 @@
-import React, { ReactNode } from 'react';
-import { useColorScheme } from 'react-native';
-import { Theme } from 'tamagui';
+import React from 'react';
+import { Theme, YStack } from 'tamagui';
+import { useThemeContext, ThemeProvider as StateProvider } from '../../state/themeContext';
 
-interface ThemeProviderProps {
-  children: ReactNode;
-}
-
-export const ThemeProvider = ({ children }: ThemeProviderProps) => {
-  // Detecta si el sistema del usuario está en modo oscuro o claro
-  const colorScheme = useColorScheme();
-
+const TamaguiThemeWrapper = ({ children }: { children: React.ReactNode }) => {
+  const { theme } = useThemeContext();
+  
   return (
-    <Theme name={colorScheme === 'dark' ? 'dark' : 'light'}>
-      {children}
+    <Theme name={theme}>
+      {/* Usamos un YStack base con una transición CSS. 
+         Esto hará que el fondo cambie suavemente en 0.5s 
+      */}
+        <YStack 
+          flex={1} 
+          backgroundColor="$background" 
+          style={{ transition: 'all 0.5s ease' } as any}
+        >
+        {children}
+      </YStack>
     </Theme>
+  );
+};
+
+export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <StateProvider>
+      <TamaguiThemeWrapper>{children}</TamaguiThemeWrapper>
+    </StateProvider>
   );
 };
