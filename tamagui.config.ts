@@ -1,10 +1,14 @@
 import { config } from '@tamagui/config/v3'
-import { createTamagui } from 'tamagui'
+import { createTamagui, TamaguiInternalConfig } from 'tamagui'
 
 const tamaguiConfig = createTamagui(config)
 
-export type AppConfig = typeof tamaguiConfig
+// Usamos una interfaz intermedia para que TS no se bloquee
+type Conf = typeof tamaguiConfig
+
 declare module 'tamagui' {
-  interface TamaguiCustomConfig extends AppConfig {}
+  interface TamaguiCustomConfig extends Conf {}
 }
-export default tamaguiConfig
+
+// Exportamos con un cast a TamaguiInternalConfig para eliminar el "unknown"
+export default tamaguiConfig as TamaguiInternalConfig
