@@ -1,10 +1,3 @@
-/**
- * BudgetCard.tsx
- * Tarjeta de presupuesto. El menú de acciones usa un Sheet de Tamagui
- * en vez del dropdown HTML (que no existe en RN).
- *
- * Ubicación: src/components/BudgetCard.tsx
- */
 import React, { useState } from 'react';
 import { YStack, XStack, SizableText, Card, Button, Sheet, Separator } from 'tamagui';
 import { CheckCircle, Clock, MoreHorizontal, Trash2, RefreshCw } from '@tamagui/lucide-icons';
@@ -34,17 +27,12 @@ export function BudgetCard({ budget, onDelete, onToggleStatus }: Props) {
         borderRadius="$5"
         padding="$4"
         backgroundColor="$background"
-        pressStyle={{ opacity: 0.95, scale: 0.99 }}
+        // Sin onPress en la Card — evita que capture toques de los botones internos
       >
-        {/* Header: nombre + badge + menú */}
+        {/* Header */}
         <XStack justifyContent="space-between" alignItems="flex-start" gap="$2" marginBottom="$3">
           <YStack flex={1} gap="$1">
-            <SizableText
-              size="$4"
-              fontWeight="700"
-              color="$color"
-              numberOfLines={1}
-            >
+            <SizableText size="$4" fontWeight="700" color="$color" numberOfLines={1}>
               {budget.name}
             </SizableText>
             <SizableText size="$2" color="$colorSubtitle">
@@ -77,13 +65,17 @@ export function BudgetCard({ budget, onDelete, onToggleStatus }: Props) {
               </SizableText>
             </XStack>
 
-            {/* Botón menú */}
+            {/* Botón menú — hitSlop para área táctil más grande */}
             <Button
-              size="$2"
+              size="$3"
               circular
               chromeless
-              onPress={() => setMenuOpen(true)}
-              icon={<MoreHorizontal size={15} color="$colorSubtitle" />}
+              onPress={(e) => {
+                // Detiene la propagación para que no llegue a ningún padre
+                e.stopPropagation();
+                setMenuOpen(true);
+              }}
+              icon={<MoreHorizontal size={16} color="$colorSubtitle" />}
             />
           </XStack>
         </XStack>
@@ -112,14 +104,20 @@ export function BudgetCard({ budget, onDelete, onToggleStatus }: Props) {
         </XStack>
       </Card>
 
-      {/* Sheet de acciones (reemplaza el dropdown HTML) */}
+      {/* Sheet de acciones */}
       <Sheet
         open={menuOpen}
         onOpenChange={setMenuOpen}
-        snapPoints={[25]}
+        snapPoints={[28]}
         dismissOnSnapToBottom
+        modal
+        zIndex={300000}
       >
-        <Sheet.Overlay enterStyle={{ opacity: 0 }} exitStyle={{ opacity: 0 }} />
+        <Sheet.Overlay
+          backgroundColor="rgba(0,0,0,0.4)"
+          enterStyle={{ opacity: 0 }}
+          exitStyle={{ opacity: 0 }}
+        />
         <Sheet.Handle />
         <Sheet.Frame padding="$4" gap="$3">
           <SizableText size="$3" fontWeight="700" color="$colorSubtitle" paddingBottom="$1">
@@ -127,7 +125,6 @@ export function BudgetCard({ budget, onDelete, onToggleStatus }: Props) {
           </SizableText>
           <Separator />
 
-          {/* Cambiar estado */}
           <Button
             onPress={() => { onToggleStatus?.(budget.id); setMenuOpen(false); }}
             chromeless
@@ -142,7 +139,6 @@ export function BudgetCard({ budget, onDelete, onToggleStatus }: Props) {
 
           <Separator />
 
-          {/* Eliminar */}
           <Button
             onPress={() => { onDelete?.(budget.id); setMenuOpen(false); }}
             chromeless

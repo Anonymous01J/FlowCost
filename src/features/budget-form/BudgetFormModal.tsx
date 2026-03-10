@@ -1,15 +1,12 @@
 import React, { useState } from 'react';
 import {
-  Dialog,
   YStack,
   XStack,
   SizableText,
   Button,
-  Unspaced,
-  Adapt,
   Sheet,
+  ScrollView,
 } from 'tamagui';
-import { ScrollView } from 'react-native';
 import { X, ChevronLeft, ChevronRight, Check } from '@tamagui/lucide-icons';
 
 import type { BudgetFormData, Budget } from './types';
@@ -20,8 +17,6 @@ import { Step2RawMaterials } from './components/Step2RawMaterials';
 import { Step3Labor } from './components/Step3Labor';
 import { Step4IndirectCosts } from './components/Step4IndirectCosts';
 import { Step5Summary } from './components/Step5Summary';
-
-// ─── Tipos y constantes ──────────────────────────────────────────────────────
 
 interface Props {
   isOpen: boolean;
@@ -43,8 +38,6 @@ function validateStep(step: number, data: BudgetFormData): string | null {
   return null;
 }
 
-// ─── Stepper indicator ───────────────────────────────────────────────────────
-
 function StepDots({ step }: { step: number }) {
   return (
     <XStack gap="$2" alignItems="center" justifyContent="center">
@@ -55,11 +48,7 @@ function StepDots({ step }: { step: number }) {
           width={s.number === step ? 20 : 6}
           borderRadius={10}
           backgroundColor={
-            s.number === step
-              ? '$blue9'
-              : s.number < step
-              ? '$blue6'
-              : '$borderColor'
+            s.number === step ? '$blue9' : s.number < step ? '$blue6' : '$borderColor'
           }
         />
       ))}
@@ -67,11 +56,9 @@ function StepDots({ step }: { step: number }) {
   );
 }
 
-// ─── Header del stepper con círculos numerados ────────────────────────────────
-
 function StepHeader({ step, onGoToStep }: { step: number; onGoToStep: (n: number) => void }) {
   return (
-    <XStack alignItems="center" gap="$0">
+    <XStack alignItems="center">
       {STEPS.map((s, i) => {
         const isComplete = step > s.number;
         const isCurrent = step === s.number;
@@ -87,49 +74,24 @@ function StepHeader({ step, onGoToStep }: { step: number; onGoToStep: (n: number
               paddingVertical="$1"
             >
               <XStack alignItems="center" gap="$1.5">
-                {/* Círculo */}
                 <YStack
-                  width={24}
-                  height={24}
-                  borderRadius={12}
-                  alignItems="center"
-                  justifyContent="center"
-                  backgroundColor={
-                    isCurrent ? '$blue9' : isComplete ? '$blue3' : '$backgroundStrong'
-                  }
+                  width={24} height={24} borderRadius={12}
+                  alignItems="center" justifyContent="center"
+                  backgroundColor={isCurrent ? '$blue9' : isComplete ? '$blue3' : '$backgroundStrong'}
                 >
                   {isComplete ? (
-                    <Check size={11} color={isCurrent ? 'white' : '$blue9'} />
+                    <Check size={11} color="$blue9" />
                   ) : (
-                    <SizableText
-                      size="$1"
-                      fontWeight="700"
-                      color={isCurrent ? 'white' : '$colorSubtitle'}
-                    >
+                    <SizableText size="$1" fontWeight="700" color={isCurrent ? 'white' : '$colorSubtitle'}>
                       {s.number}
                     </SizableText>
                   )}
                 </YStack>
-                {/* Texto (solo en pantallas grandes) */}
-                <SizableText
-                  size="$2"
-                  color={isCurrent ? '$blue9' : isComplete ? '$colorSubtitle' : '$colorPlaceholder'}
-                  display="none"
-                  $gtSm={{ display: 'flex' }}
-                >
-                  {s.short}
-                </SizableText>
               </XStack>
             </Button>
-
-            {/* Línea separadora */}
             {i < STEPS.length - 1 && (
-              <YStack
-                flex={1}
-                height={2}
-                borderRadius={4}
-                backgroundColor={step > s.number ? '$blue7' : '$borderColor'}
-              />
+              <YStack flex={1} height={2} borderRadius={4}
+                backgroundColor={step > s.number ? '$blue7' : '$borderColor'} />
             )}
           </React.Fragment>
         );
@@ -137,8 +99,6 @@ function StepHeader({ step, onGoToStep }: { step: number; onGoToStep: (n: number
     </XStack>
   );
 }
-
-// ─── Modal principal ──────────────────────────────────────────────────────────
 
 export function BudgetFormModal({ isOpen, onClose, onSave }: Props) {
   const [step, setStep] = useState(1);
@@ -163,10 +123,7 @@ export function BudgetFormModal({ isOpen, onClose, onSave }: Props) {
   };
 
   const goToStep = (n: number) => {
-    if (n < step) {
-      setError(null);
-      setStep(n);
-    }
+    if (n < step) { setError(null); setStep(n); }
   };
 
   const handleSaveAndExport = () => {
@@ -205,182 +162,127 @@ export function BudgetFormModal({ isOpen, onClose, onSave }: Props) {
   };
 
   return (
-    <Dialog modal open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      {/*
-       * Adapt hace que en móvil el Dialog use un Sheet (bottom sheet)
-       * y en desktop ($gtSm) use el Dialog centrado clásico.
-       */}
-      <Adapt when="touch" platform="touch">
-        <Sheet
-          zIndex={200000}
-          modal
-          dismissOnSnapToBottom={false}
-          snapPoints={[92]}
-        >
-          <Sheet.Frame>
-            <Sheet.Handle />
-            <Adapt.Contents />
-          </Sheet.Frame>
-          <Sheet.Overlay
-            enterStyle={{ opacity: 0 }}
-            exitStyle={{ opacity: 0 }}
-          />
-        </Sheet>
-      </Adapt>
+    <Sheet
+      open={isOpen}
+      onOpenChange={(open) => { if (!open) handleClose(); }}
+      snapPoints={[100]}
+      dismissOnSnapToBottom={false}
+      modal
+      zIndex={200000}
+    >
+      <Sheet.Overlay
+        backgroundColor="rgba(0,0,0,0.5)"
+        enterStyle={{ opacity: 0 }}
+        exitStyle={{ opacity: 0 }}
+      />
 
-      <Dialog.Portal>
-        <Dialog.Overlay
-          key="overlay"
-          opacity={0.6}
-          enterStyle={{ opacity: 0 }}
-          exitStyle={{ opacity: 0 }}
-          backgroundColor="black"
-        />
+      {/* Sin Sheet.Handle — el modal ocupa 100% y tiene su propio botón de cierre */}
+      <Sheet.Frame backgroundColor="$background" flex={1}>
 
-        <Dialog.Content
-          bordered
-          elevate
-          key="content"
-          enterStyle={{ x: 0, y: 10, opacity: 0, scale: 0.97 }}
-          exitStyle={{ x: 0, y: 10, opacity: 0, scale: 0.97 }}
-          // Mobile: fullscreen. Desktop ($gtSm): dialog centrado.
-          width="100%"
-          maxWidth={900}
-          maxHeight="95%"
-          $gtSm={{ width: '90%', maxWidth: 900, borderRadius: '$6' }}
-          borderRadius="$5"
-          padding={0}
-          overflow="hidden"
+        {/* ── Header ── */}
+        <YStack
+          paddingHorizontal="$5"
+          paddingTop="$10"
+          paddingBottom="$3"
+          gap="$3"
+          borderBottomWidth={1}
+          borderBottomColor="$borderColor"
         >
-          {/* ── Header ── */}
-          <YStack
-            paddingHorizontal="$5"
-            paddingTop="$4"
-            paddingBottom="$3"
-            gap="$3"
-            borderBottomWidth={1}
-            borderBottomColor="$borderColor"
-          >
-            {/* Título + botón cierre */}
-            <XStack justifyContent="space-between" alignItems="flex-start">
-              <YStack gap="$1">
-                <XStack alignItems="center" gap="$2">
-                  {/* Ícono FC */}
-                  <YStack
-                    width={20}
-                    height={20}
-                    borderRadius="$2"
-                    backgroundColor="$blue9"
-                    alignItems="center"
-                    justifyContent="center"
-                  >
-                    <SizableText size="$1" fontWeight="700" color="white">FC</SizableText>
-                  </YStack>
-                  <SizableText size="$5" fontWeight="700" color="$color">
-                    Nuevo Presupuesto
-                  </SizableText>
-                </XStack>
-                <SizableText size="$2" color="$colorSubtitle">
-                  Paso {step} de {STEPS.length} — {STEPS[step - 1].title}
+          <XStack justifyContent="space-between" alignItems="flex-start">
+            <YStack gap="$1">
+              <XStack alignItems="center" gap="$2">
+                <YStack
+                  width={20} height={20} borderRadius="$2"
+                  backgroundColor="$blue9"
+                  alignItems="center" justifyContent="center"
+                >
+                  <SizableText size="$1" fontWeight="700" color="white">FC</SizableText>
+                </YStack>
+                <SizableText size="$5" fontWeight="700" color="$color">
+                  Nuevo Presupuesto
                 </SizableText>
-              </YStack>
-
-              <Unspaced>
-                <Dialog.Close asChild>
-                  <Button
-                    size="$3"
-                    circular
-                    chromeless
-                    onPress={handleClose}
-                    icon={<X size={18} />}
-                  />
-                </Dialog.Close>
-              </Unspaced>
-            </XStack>
-
-            {/* Stepper */}
-            <StepHeader step={step} onGoToStep={goToStep} />
-          </YStack>
-
-          {/* ── Error ── */}
-          {error && (
-            <YStack
-              marginHorizontal="$5"
-              marginTop="$3"
-              paddingHorizontal="$4"
-              paddingVertical="$3"
-              backgroundColor="$red3"
-              borderColor="$red6"
-              borderWidth={1}
-              borderRadius="$4"
-            >
-              <SizableText size="$3" color="$red9">{error}</SizableText>
-            </YStack>
-          )}
-
-          {/* ── Contenido del paso ── */}
-          <ScrollView
-            style={{ flex: 1 }}
-            contentContainerStyle={{ padding: 20, paddingBottom: 8 }}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            {currentStepContent()}
-          </ScrollView>
-
-          {/* ── Footer de navegación ── */}
-          <XStack
-            paddingHorizontal="$5"
-            paddingVertical="$4"
-            borderTopWidth={1}
-            borderTopColor="$borderColor"
-            justifyContent="space-between"
-            alignItems="center"
-            backgroundColor="$background"
-          >
-            {/* Anterior */}
-            <Button
-              onPress={goPrev}
-              disabled={step === 1}
-              chromeless
-              icon={<ChevronLeft size={16} color={step === 1 ? '$colorPlaceholder' : '$colorSubtitle'} />}
-              opacity={step === 1 ? 0.4 : 1}
-            >
-              <SizableText color={step === 1 ? '$colorPlaceholder' : '$colorSubtitle'}>
-                Anterior
+              </XStack>
+              <SizableText size="$2" color="$colorSubtitle">
+                Paso {step} de {STEPS.length} — {STEPS[step - 1].title}
               </SizableText>
-            </Button>
+            </YStack>
 
-            {/* Puntos de progreso */}
-            <StepDots step={step} />
-
-            {/* Siguiente / Finalizar */}
-            {step < 5 ? (
-              <Button
-                onPress={goNext}
-                backgroundColor="$blue9"
-                borderRadius="$4"
-                paddingHorizontal="$5"
-                iconAfter={<ChevronRight size={16} color="white" />}
-                pressStyle={{ opacity: 0.85, scale: 0.97 }}
-              >
-                <SizableText color="white" fontWeight="600">Siguiente</SizableText>
-              </Button>
-            ) : (
-              <Button
-                onPress={handleSaveAndExport}
-                backgroundColor="$green9"
-                borderRadius="$4"
-                paddingHorizontal="$5"
-                icon={<Check size={16} color="white" />}
-                pressStyle={{ opacity: 0.85, scale: 0.97 }}
-              >
-                <SizableText color="white" fontWeight="600">Finalizar</SizableText>
-              </Button>
-            )}
+            <Button
+              size="$3" circular chromeless
+              onPress={handleClose}
+              icon={<X size={18} />}
+            />
           </XStack>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog>
+
+          <StepHeader step={step} onGoToStep={goToStep} />
+        </YStack>
+
+        {/* ── Error ── */}
+        {error && (
+          <YStack
+            marginHorizontal="$5" marginTop="$3"
+            paddingHorizontal="$4" paddingVertical="$3"
+            backgroundColor="$red3" borderColor="$red6"
+            borderWidth={1} borderRadius="$4"
+          >
+            <SizableText size="$3" color="$red9">{error}</SizableText>
+          </YStack>
+        )}
+
+        {/* ── Contenido scrolleable ── */}
+        <Sheet.ScrollView
+          flex={1}
+          contentContainerStyle={{ padding: 20, paddingBottom: 16 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {currentStepContent()}
+        </Sheet.ScrollView>
+
+        {/* ── Footer ── */}
+        <XStack
+          paddingHorizontal="$5" paddingVertical="$4"
+          paddingBottom="$6"
+          borderTopWidth={1} borderTopColor="$borderColor"
+          justifyContent="space-between" alignItems="center"
+          backgroundColor="$background"
+        >
+          <Button
+            onPress={goPrev}
+            disabled={step === 1}
+            chromeless
+            icon={<ChevronLeft size={16} color={step === 1 ? '$colorPlaceholder' : '$colorSubtitle'} />}
+            opacity={step === 1 ? 0.4 : 1}
+          >
+            <SizableText color={step === 1 ? '$colorPlaceholder' : '$colorSubtitle'}>
+              Anterior
+            </SizableText>
+          </Button>
+
+          <StepDots step={step} />
+
+          {step < 5 ? (
+            <Button
+              onPress={goNext}
+              backgroundColor="$blue9" borderRadius="$4" paddingHorizontal="$5"
+              iconAfter={<ChevronRight size={16} color="white" />}
+              pressStyle={{ opacity: 0.85, scale: 0.97 }}
+            >
+              <SizableText color="white" fontWeight="600">Siguiente</SizableText>
+            </Button>
+          ) : (
+            <Button
+              onPress={handleSaveAndExport}
+              backgroundColor="$green9" borderRadius="$4" paddingHorizontal="$5"
+              icon={<Check size={16} color="white" />}
+              pressStyle={{ opacity: 0.85, scale: 0.97 }}
+            >
+              <SizableText color="white" fontWeight="600">Finalizar</SizableText>
+            </Button>
+          )}
+        </XStack>
+
+      </Sheet.Frame>
+    </Sheet>
   );
 }

@@ -1,19 +1,6 @@
-/**
- * OptionSheet.tsx
- * Reemplaza los <select> HTML con un Sheet de Tamagui.
- * Uso:
- *   <OptionSheet
- *     open={open}
- *     onOpenChange={setOpen}
- *     options={UNIT_OPTIONS.map(u => ({ value: u, label: u }))}
- *     value={selected}
- *     onSelect={(val) => { setSelected(val); setOpen(false); }}
- *     title="Unidad"
- *   />
- */
 import React from 'react';
 import { Sheet, YStack, XStack, Button, SizableText, Separator } from 'tamagui';
-import { Check } from '@tamagui/lucide-icons';
+import { Check, ChevronDown } from '@tamagui/lucide-icons';
 
 interface Option {
   value: string;
@@ -43,10 +30,16 @@ export function OptionSheet({
       onOpenChange={onOpenChange}
       snapPoints={[50, 85]}
       dismissOnSnapToBottom
+      modal
+      zIndex={300000}
     >
-      <Sheet.Overlay enterStyle={{ opacity: 0 }} exitStyle={{ opacity: 0 }} />
+      <Sheet.Overlay
+        backgroundColor="rgba(0,0,0,0.5)"
+        enterStyle={{ opacity: 0 }}
+        exitStyle={{ opacity: 0 }}
+      />
       <Sheet.Handle />
-      <Sheet.Frame padding="$4" gap="$3">
+      <Sheet.Frame padding="$4" gap="$3" backgroundColor="$background">
         {title && (
           <>
             <SizableText size="$5" fontWeight="700" color="$color">
@@ -56,7 +49,7 @@ export function OptionSheet({
           </>
         )}
         <Sheet.ScrollView showsVerticalScrollIndicator={false}>
-          <YStack gap="$2">
+          <YStack gap="$2" paddingBottom="$6">
             {options.map((opt) => {
               const isSelected = opt.value === value;
               return (
@@ -89,10 +82,6 @@ export function OptionSheet({
   );
 }
 
-/**
- * SelectTrigger - botón que activa el OptionSheet.
- * Replica visualmente el estilo de los inputs del formulario.
- */
 interface SelectTriggerProps {
   label: string;
   onPress: () => void;
@@ -100,6 +89,7 @@ interface SelectTriggerProps {
 }
 
 export function SelectTrigger({ label, onPress, placeholder }: SelectTriggerProps) {
+  const isEmpty = !label || label === placeholder;
   return (
     <Button
       onPress={onPress}
@@ -108,15 +98,16 @@ export function SelectTrigger({ label, onPress, placeholder }: SelectTriggerProp
       borderWidth={1}
       borderRadius="$3"
       height="$4"
-      justifyContent="flex-start"
+      justifyContent="space-between"
       paddingHorizontal="$3"
     >
       <SizableText
         size="$3"
-        color={label === placeholder ? '$colorPlaceholder' : '$color'}
+        color={isEmpty ? '$colorPlaceholder' : '$color'}
       >
         {label || placeholder || 'Seleccionar...'}
       </SizableText>
+      <ChevronDown size={14} color="$colorSubtitle" />
     </Button>
   );
 }

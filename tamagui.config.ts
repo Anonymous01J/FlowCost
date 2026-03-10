@@ -8,8 +8,10 @@ const animations = createAnimations({
   medium: { type: 'timing', duration: 200 },
 })
 
-// Define Inter con todos sus pesos
 const interFont = createFont({
+  // 'Inter-Regular' es el nombre registrado en useFonts para weight 400
+  // Tamagui usa `face` para cambiar el archivo según fontWeight,
+  // pero `family` debe ser el nombre del peso por defecto (400).
   family: 'Inter-Regular',
   size: {
     1: 11, 2: 12, 3: 13, 4: 14,
@@ -33,7 +35,6 @@ const interFont = createFont({
     4: 0, 8: -0.5, 10: -1, 12: -1.5,
     true: 0,
   },
-  // Mapea cada peso a su archivo de fuente cargado
   face: {
     100: { normal: 'Inter-Thin' },
     200: { normal: 'Inter-ExtraLight' },
@@ -50,11 +51,15 @@ const interFont = createFont({
 const tamaguiConfig = createTamagui({
   ...config,
   animations,
-  // Sobreescribe las fuentes del config base con Inter
   fonts: {
-    ...config.fonts,
+    // Reemplaza TODAS las keys de fuente del config base con Inter.
+    // Las keys que usa Tamagui internamente son: body, heading, mono.
+    // SizableText usa 'body', Text/Paragraph usan 'body', headings usan 'heading'.
     body: interFont,
     heading: interFont,
+    mono: interFont,
+    // El config base de Tamagui v3 también registra estas keys:
+    silkscreen: interFont,
   },
 })
 
