@@ -1,13 +1,43 @@
 import { Stack } from 'expo-router';
 import { TamaguiProvider } from 'tamagui';
-import config from '../tamagui.config'; 
+import { useFonts } from 'expo-font';
+import { useEffect } from 'react';
+import * as SplashScreen from 'expo-splash-screen';
+import config from '../tamagui.config';
 import { ThemeProvider } from '../src/core/theme/ThemeProvider';
+import { BudgetsProvider } from '../src/store/Budgetscontext ';
+
+// Mantiene el splash visible mientras cargan las fuentes
+SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    'Inter-Thin':       require('../assets/fonts/Inter-Thin.ttf'),
+    'Inter-ExtraLight': require('../assets/fonts/Inter-ExtraLight.ttf'),
+    'Inter-Light':      require('../assets/fonts/Inter-Light.ttf'),
+    'Inter-Regular':    require('../assets/fonts/Inter-Regular.ttf'),
+    'Inter-Medium':     require('../assets/fonts/Inter-Medium.ttf'),
+    'Inter-SemiBold':   require('../assets/fonts/Inter-SemiBold.ttf'),
+    'Inter-Bold':       require('../assets/fonts/Inter-Bold.ttf'),
+    'Inter-ExtraBold':  require('../assets/fonts/Inter-ExtraBold.ttf'),
+    'Inter-Black':      require('../assets/fonts/Inter-Black.ttf'),
+  });
+
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontError]);
+
+  // No renderiza nada hasta que las fuentes estén listas
+  if (!fontsLoaded && !fontError) return null;
+
   return (
     <TamaguiProvider config={config} defaultTheme="light">
       <ThemeProvider>
-        <Stack screenOptions={{ headerShown: false }} />
+        <BudgetsProvider>
+          <Stack screenOptions={{ headerShown: false }} />
+        </BudgetsProvider>
       </ThemeProvider>
     </TamaguiProvider>
   );
