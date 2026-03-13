@@ -8,22 +8,29 @@ const animations = createAnimations({
   medium: { type: 'timing', duration: 200 },
 })
 
+// Escala subida ~1-2pt respecto al default de Tamagui
 const interFont = createFont({
-  // 'Inter-Regular' es el nombre registrado en useFonts para weight 400
-  // Tamagui usa `face` para cambiar el archivo según fontWeight,
-  // pero `family` debe ser el nombre del peso por defecto (400).
   family: 'Inter-Regular',
   size: {
-    1: 11, 2: 12, 3: 13, 4: 14,
-    5: 15, 6: 16, 7: 18, 8: 20,
-    9: 24, 10: 28, 11: 32, 12: 40,
-    true: 14,
+    1: 13,   // era 11 — badges, labels uppercase
+    2: 14,   // era 12 — subtítulos secundarios
+    3: 15,   // era 13 — texto de cuerpo normal
+    4: 16,   // era 14 — texto principal, inputs
+    5: 17,   // era 15
+    6: 18,   // era 16 — títulos de sección
+    7: 20,   // era 18
+    8: 22,   // era 20
+    9: 26,   // era 24 — títulos grandes
+    10: 30,  // era 28
+    11: 34,  // era 32
+    12: 42,  // era 40
+    true: 16,
   },
   lineHeight: {
-    1: 16, 2: 17, 3: 18, 4: 20,
-    5: 22, 6: 24, 7: 26, 8: 28,
-    9: 32, 10: 36, 11: 40, 12: 50,
-    true: 20,
+    1: 18, 2: 20, 3: 22, 4: 24,
+    5: 26, 6: 28, 7: 30, 8: 32,
+    9: 36, 10: 42, 11: 46, 12: 54,
+    true: 24,
   },
   weight: {
     1: '100', 2: '200', 3: '300', 4: '400',
@@ -52,13 +59,9 @@ const tamaguiConfig = createTamagui({
   ...config,
   animations,
   fonts: {
-    // Reemplaza TODAS las keys de fuente del config base con Inter.
-    // Las keys que usa Tamagui internamente son: body, heading, mono.
-    // SizableText usa 'body', Text/Paragraph usan 'body', headings usan 'heading'.
     body: interFont,
     heading: interFont,
     mono: interFont,
-    // El config base de Tamagui v3 también registra estas keys:
     silkscreen: interFont,
   },
 })

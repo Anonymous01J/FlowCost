@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { YStack, XStack, SizableText, Input, Button, Card, Separator } from 'tamagui';
+import { YStack, XStack, SizableText, Button, Card, Separator } from 'tamagui';
 import { Plus, Trash2 } from '@tamagui/lucide-icons';
 import type { BudgetFormData, RawMaterialRow } from '../types';
 import { UNIT_OPTIONS } from '../types';
 import { calcRawMaterial, fmt } from '../calculations';
 import { OptionSheet, SelectTrigger } from './OptionSheet';
+import InputCustom, { formatVE } from '../../../components/ui/InputCustom';
 
 interface Props {
   data: BudgetFormData;
@@ -12,37 +13,14 @@ interface Props {
 }
 
 function newRow(): RawMaterialRow {
-  return {
-    id: Math.random().toString(36).slice(2), // crypto.randomUUID() no siempre disponible en RN
-    supply: '',
-    quantity: 1,
-    unit: 'unidad',
-    costUSD: 0,
-  };
-}
-
-function FieldLabel({ children }: { children: string }) {
-  return (
-    <SizableText size="$1" color="$colorSubtitle" marginBottom="$1" textTransform="uppercase">
-      {children}
-    </SizableText>
-  );
+  return { id: Math.random().toString(36).slice(2), supply: '', quantity: 1, unit: 'unidad', costUSD: 0 };
 }
 
 function ReadonlyField({ value }: { value: string }) {
   return (
-    <YStack
-      backgroundColor="$backgroundStrong"
-      borderColor="$borderColor"
-      borderWidth={1}
-      borderRadius="$3"
-      paddingHorizontal="$3"
-      height="$4"
-      justifyContent="center"
-    >
-      <SizableText size="$3" color="$colorSubtitle">
-        {value}
-      </SizableText>
+    <YStack backgroundColor="$backgroundStrong" borderColor="$borderColor" borderWidth={1}
+      borderRadius="$3" paddingHorizontal="$3" height="$5" justifyContent="center">
+      <SizableText size="$3" color="$colorSubtitle">{value}</SizableText>
     </YStack>
   );
 }
@@ -56,97 +34,86 @@ interface RowCardProps {
 
 function RowCard({ row, onUpdate, onRemove }: RowCardProps) {
   const [unitSheetOpen, setUnitSheetOpen] = useState(false);
+  const [costDisplay, setCostDisplay] = useState(row.costUSD ? formatVE(row.costUSD) : '');
+  const [qtyDisplay, setQtyDisplay] = useState(String(row.quantity));
 
   return (
-    <Card
-      borderColor="$borderColor"
-      borderWidth={1}
-      borderRadius="$4"
-      padding="$3"
-      backgroundColor="$background"
-      gap="$3"
-    >
-      {/* Header de la tarjeta */}
+    <Card borderColor="$borderColor" borderWidth={1} borderRadius="$4" padding="$3"
+      backgroundColor="$background" gap="$3">
       <XStack justifyContent="space-between" alignItems="center">
-        <SizableText size="$1" color="$colorSubtitle" textTransform="uppercase">
+        <SizableText size="$2" color="$colorSubtitle" fontWeight="600" textTransform="uppercase">
           Insumo
         </SizableText>
-        <Button
-          size="$2"
-          circular
-          chromeless
-          onPress={onRemove}
-          icon={<Trash2 size={14} color="$red9" />}
-        />
+        <Button size="$2" circular chromeless onPress={onRemove}
+          icon={<Trash2 size={14} color="$red9" />} />
       </XStack>
 
-      {/* Nombre del insumo */}
-      <Input
+      <InputCustom
         placeholder="Nombre del insumo"
+        variant="text"
         value={row.supply}
         onChangeText={(t) => onUpdate({ supply: t })}
-        size="$4"
       />
 
-      {/* Grid 2x2 */}
       <XStack gap="$2">
         <YStack flex={1}>
-          <FieldLabel>Cantidad</FieldLabel>
-          <Input
-            keyboardType="decimal-pad"
-            value={String(row.quantity)}
-            onChangeText={(t) => onUpdate({ quantity: parseFloat(t) || 0 })}
-            size="$4"
+          <InputCustom
+            label="Cantidad"
+            variant="decimal"
+            placeholder="1"
+            value={qtyDisplay}
+            onChangeText={setQtyDisplay}
+            onChangeValue={(n) => onUpdate({ quantity: n })}
           />
         </YStack>
         <YStack flex={1}>
-          <FieldLabel>Unidad</FieldLabel>
-          <SelectTrigger
-            label={row.unit}
-            onPress={() => setUnitSheetOpen(true)}
-          />
+          <SizableText size="$2" color="$colorSubtitle" fontWeight="500" marginBottom="$1">
+            Unidad
+          </SizableText>
+          <SelectTrigger label={row.unit} onPress={() => setUnitSheetOpen(true)} />
         </YStack>
       </XStack>
 
       <XStack gap="$2">
         <YStack flex={1}>
-          <FieldLabel>Costo USD</FieldLabel>
-          <Input
-            keyboardType="decimal-pad"
-            placeholder="0.00"
-            value={row.costUSD ? String(row.costUSD) : ''}
-            onChangeText={(t) => onUpdate({ costUSD: parseFloat(t) || 0 })}
-            size="$4"
+          <InputCustom
+            label="Costo USD"
+            variant="price"
+            prefix="$"
+            placeholder="0,00"
+            value={costDisplay}
+            onChangeText={setCostDisplay}
+            onChangeValue={(n) => onUpdate({ costUSD: n })}
           />
         </YStack>
         <YStack flex={1}>
-          <FieldLabel>Costo Bs.</FieldLabel>
-          <ReadonlyField value={fmt(row.costBS)} />
+          <SizableText size="$2" color="$colorSubtitle" fontWeight="500" marginBottom="$1">
+            Costo Bs.
+          </SizableText>
+          <ReadonlyField value={formatVE(row.costBS)} />
         </YStack>
       </XStack>
 
       <XStack gap="$2">
         <YStack flex={1}>
-          <FieldLabel>Sub. USD</FieldLabel>
-          <ReadonlyField value={`$ ${fmt(row.subtotalUSD)}`} />
+          <SizableText size="$2" color="$colorSubtitle" fontWeight="500" marginBottom="$1">
+            Sub. USD
+          </SizableText>
+          <ReadonlyField value={`$ ${formatVE(row.subtotalUSD)}`} />
         </YStack>
         <YStack flex={1}>
-          <FieldLabel>Sub. Bs.</FieldLabel>
-          <ReadonlyField value={`Bs. ${fmt(row.subtotalBS)}`} />
+          <SizableText size="$2" color="$colorSubtitle" fontWeight="500" marginBottom="$1">
+            Sub. Bs.
+          </SizableText>
+          <ReadonlyField value={`Bs. ${formatVE(row.subtotalBS)}`} />
         </YStack>
       </XStack>
 
-      <OptionSheet
-        open={unitSheetOpen}
-        onOpenChange={setUnitSheetOpen}
+      <OptionSheet open={unitSheetOpen} onOpenChange={setUnitSheetOpen}
         options={UNIT_OPTIONS.map((u) => ({ value: u, label: u }))}
         value={row.unit}
-        onSelect={(val) => {
-          onUpdate({ unit: val });
-          setUnitSheetOpen(false);
-        }}
-        title="Unidad de Medida"
-      />
+        onSelect={(val) => { onUpdate({ unit: val }); setUnitSheetOpen(false); }}
+        title="Unidad de Medida" />
     </Card>
   );
 }
@@ -155,19 +122,14 @@ export function Step2RawMaterials({ data, onChange }: Props) {
   const rows = data.rawMaterials;
   const calcs = rows.map((r) => calcRawMaterial(r, data.exchangeRate));
   const totalUSD = calcs.reduce((s, r) => s + r.subtotalUSD, 0);
-  const totalBS = calcs.reduce((s, r) => s + r.subtotalBS, 0);
+  const totalBS  = calcs.reduce((s, r) => s + r.subtotalBS,  0);
 
-  const updateRow = (id: string, updates: Partial<RawMaterialRow>) => {
+  const updateRow = (id: string, updates: Partial<RawMaterialRow>) =>
     onChange({ rawMaterials: rows.map((r) => (r.id === id ? { ...r, ...updates } : r)) });
-  };
-
-  const removeRow = (id: string) => {
+  const removeRow = (id: string) =>
     onChange({ rawMaterials: rows.filter((r) => r.id !== id) });
-  };
-
-  const addRow = () => {
+  const addRow = () =>
     onChange({ rawMaterials: [...rows, newRow()] });
-  };
 
   return (
     <YStack gap="$4">
@@ -175,65 +137,36 @@ export function Step2RawMaterials({ data, onChange }: Props) {
         Lista todos los insumos o materias primas necesarias para producir el lote.
       </SizableText>
 
-      {/* Tarjetas de filas */}
       {calcs.length === 0 ? (
-        <YStack
-          borderColor="$borderColor"
-          borderWidth={1}
-          borderStyle="dashed"
-          borderRadius="$4"
-          paddingVertical="$8"
-          alignItems="center"
-          justifyContent="center"
-        >
+        <YStack borderColor="$borderColor" borderWidth={1} borderStyle="dashed"
+          borderRadius="$4" paddingVertical="$8" alignItems="center" justifyContent="center">
           <SizableText size="$3" color="$colorSubtitle" opacity={0.6}>
             Sin insumos — agrega la primera fila
           </SizableText>
         </YStack>
       ) : (
         calcs.map((row) => (
-          <RowCard
-            key={row.id}
-            row={row}
-            exchangeRate={data.exchangeRate}
-            onUpdate={(updates) => updateRow(row.id, updates)}
-            onRemove={() => removeRow(row.id)}
-          />
+          <RowCard key={row.id} row={row} exchangeRate={data.exchangeRate}
+            onUpdate={(u) => updateRow(row.id, u)} onRemove={() => removeRow(row.id)} />
         ))
       )}
 
-      {/* Botón agregar */}
-      <Button
-        onPress={addRow}
-        borderColor="$blue7"
-        borderWidth={1}
-        borderStyle="dashed"
-        borderRadius="$4"
-        backgroundColor="transparent"
-        icon={<Plus size={16} color="$blue9" />}
-        color="$blue9"
-      >
-        Agregar Insumo
+      <Button onPress={addRow} borderColor="$blue7" borderWidth={1} borderStyle="dashed"
+        borderRadius="$4" backgroundColor="transparent" icon={<Plus size={16} color="$blue9" />}>
+        <SizableText color="$blue9">Agregar Insumo</SizableText>
       </Button>
 
-      {/* Totales */}
       {rows.length > 0 && (
-        <Card
-          backgroundColor="$backgroundStrong"
-          borderColor="$borderColor"
-          borderWidth={1}
-          borderRadius="$4"
-          padding="$4"
-          gap="$2"
-        >
+        <Card backgroundColor="$backgroundStrong" borderColor="$borderColor" borderWidth={1}
+          borderRadius="$4" padding="$4" gap="$2">
           <XStack justifyContent="space-between">
             <SizableText size="$3" color="$colorSubtitle">Total USD:</SizableText>
-            <SizableText size="$3" fontWeight="700" color="$color">$ {fmt(totalUSD)}</SizableText>
+            <SizableText size="$3" fontWeight="700" color="$color">$ {formatVE(totalUSD)}</SizableText>
           </XStack>
           <Separator />
           <XStack justifyContent="space-between">
             <SizableText size="$3" color="$colorSubtitle">Total Bs.:</SizableText>
-            <SizableText size="$3" fontWeight="700" color="$color">Bs. {fmt(totalBS)}</SizableText>
+            <SizableText size="$3" fontWeight="700" color="$color">Bs. {formatVE(totalBS)}</SizableText>
           </XStack>
         </Card>
       )}
