@@ -5,9 +5,8 @@ import { useEffect } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 import config from '../tamagui.config';
 import { ThemeProvider } from '../src/core/theme/ThemeProvider';
-import { BudgetsProvider } from '../src/store/Budgetscontext ';
+import { BudgetsProvider } from '../src/store/BudgetsContext';
 
-// Mantiene el splash visible mientras cargan las fuentes
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -24,12 +23,9 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
-    }
+    if (fontsLoaded || fontError) SplashScreen.hideAsync();
   }, [fontsLoaded, fontError]);
 
-  // No renderiza nada hasta que las fuentes estén listas
   if (!fontsLoaded && !fontError) return null;
 
   return (

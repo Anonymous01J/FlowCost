@@ -1,37 +1,11 @@
-/**
- * InputCustom.tsx
- * Componente universal de input para FlowCost.
- *
- * Variantes:
- *   text     → texto libre
- *   decimal  → acepta decimales con punto (ej: 36.5)
- *   integer  → solo enteros
- *   price    → formateador venezolano en tiempo real: 1.234,56
- *              onChangeValue devuelve el número real parseado
- *
- * Uso básico:
- *   <InputCustom label="Nombre" value={name} onChangeText={setName} />
- *
- * Uso precio:
- *   <InputCustom
- *     label="Costo USD"
- *     variant="price"
- *     prefix="$"
- *     value={displayValue}        // string formateado que se muestra
- *     onChangeText={setDisplay}   // actualiza el string en pantalla
- *     onChangeValue={setCostUSD}  // recibe el número real (1234.56)
- *   />
- */
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { TextInput, StyleSheet } from 'react-native';
 import { YStack, XStack, SizableText } from 'tamagui';
+import { useThemeContext } from '../../state/themeContext';
 import type { InputCustomProps } from './interface';
 
-// ─── Utilidades de formato venezolano ────────────────────────────────────────
+// ─── Formato venezolano ───────────────────────────────────────────────────────
 
-/**
- * Formatea un número al estilo venezolano/europeo: 1.234,56
- */
 export function formatVE(value: number, decimals = 2): string {
   if (isNaN(value)) return '0,00';
   const fixed = value.toFixed(decimals);
@@ -40,20 +14,12 @@ export function formatVE(value: number, decimals = 2): string {
   return intFormatted + ',' + dec;
 }
 
-/**
- * Parsea un string formateado venezolano a número: "1.234,56" → 1234.56
- */
 export function parseVE(formatted: string): number {
   const clean = formatted.replace(/\./g, '').replace(',', '.');
   const n = parseFloat(clean);
   return isNaN(n) ? 0 : n;
 }
 
-/**
- * Formateador de input en tiempo real estilo venezolano.
- * Trabaja solo con dígitos, coloca coma decimal automáticamente
- * en los últimos 2 dígitos: "12345" → "123,45"
- */
 function formatPriceInput(raw: string): string {
   const digits = raw.replace(/[^0-9]/g, '');
   const len = digits.length;
@@ -65,7 +31,31 @@ function formatPriceInput(raw: string): string {
   return formatted + ',' + decPart;
 }
 
-// ─── Componente ───────────────────────────────────────────────────────────────
+// ─── Tokens de color por tema ─────────────────────────────────────────────────
+const COLORS = {
+  light: {
+    text:        '#0f172a',
+    placeholder: '#94a3b8',
+    border:      '#cbd5e1',
+    borderFocus: '#3b82f6',
+    borderError: '#ef4444',
+    bg:          '#ffffff',
+    bgDisabled:  '#f1f5f9',
+    label:       '#64748b',
+    prefix:      '#64748b',
+  },
+  dark: {
+    text:        '#f1f5f9',
+    placeholder: '#64748b',
+    border:      '#334155',
+    borderFocus: '#60a5fa',
+    borderError: '#f87171',
+    bg:          '#1e293b',
+    bgDisabled:  '#0f172a',
+    label:       '#94a3b8',
+    prefix:      '#94a3b8',
+  },
+};
 
 export default function InputCustom({
   label,
@@ -83,15 +73,19 @@ export default function InputCustom({
   secureTextEntry,
   textContentType,
 }: InputCustomProps) {
+  // Usa el tema de la app, no el del sistema operativo
+  const { theme } = useThemeContext();
+  const c = theme === 'dark' ? COLORS.dark : COLORS.light;
+
+  const [focused, setFocused] = useState(false);
   const inputRef = useRef<TextInput>(null);
 
-  // Determina el keyboardType según la variante
   const keyboardType = (() => {
     switch (variant) {
       case 'price':
-      case 'integer': return 'number-pad';
-      case 'decimal': return 'decimal-pad';
-      default: return 'default';
+      case 'integer': return 'number-pad' as const;
+      case 'decimal': return 'decimal-pad' as const;
+      default:        return 'default' as const;
     }
   })();
 
@@ -101,7 +95,6 @@ export default function InputCustom({
       onChangeText?.(formatted);
       onChangeValue?.(parseVE(formatted));
     } else if (variant === 'decimal') {
-      // Permite solo dígitos y un punto decimal
       const clean = text.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
       onChangeText?.(clean);
       onChangeValue?.(parseFloat(clean) || 0);
@@ -115,41 +108,36 @@ export default function InputCustom({
   };
 
   const hasError = !!error;
-  const borderColor = hasError ? '#ef4444' : '#e2e8f0';
-  const focusBorderColor = hasError ? '#ef4444' : '#3b82f6';
+  const borderColor = hasError ? c.borderError : focused ? c.borderFocus : c.border;
 
   return (
     <YStack gap={4}>
       {label && (
-        <SizableText size="$2" color="$colorSubtitle" fontWeight="500">
+        <SizableText size="$2" fontWeight="500" style={{ color: c.label }}>
           {label}
         </SizableText>
       )}
 
       <XStack
-        borderWidth={1.5}
-        borderColor={borderColor as any}
+        borderWidth={focused ? 2 : 1.5}
         borderRadius="$3"
-        backgroundColor={disabled ? '$backgroundStrong' : '$background'}
         alignItems="center"
         paddingHorizontal="$3"
         height="$5"
         gap="$2"
+        style={{ borderColor, backgroundColor: disabled ? c.bgDisabled : c.bg }}
       >
         {prefix && (
-          <SizableText size="$3" color="$colorSubtitle" fontWeight="500">
+          <SizableText size="$3" fontWeight="500" style={{ color: c.prefix }}>
             {prefix}
           </SizableText>
         )}
 
         <TextInput
           ref={inputRef}
-          style={[
-            styles.input,
-            disabled && styles.disabled,
-          ]}
+          style={[styles.input, { color: disabled ? c.placeholder : c.text }]}
           placeholder={placeholder}
-          placeholderTextColor="#94a3b8"
+          placeholderTextColor={c.placeholder}
           value={value}
           onChangeText={handleChangeText}
           keyboardType={keyboardType}
@@ -158,17 +146,19 @@ export default function InputCustom({
           autoCorrect={autoCorrect}
           secureTextEntry={secureTextEntry}
           textContentType={textContentType}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
         />
 
         {suffix && (
-          <SizableText size="$3" color="$colorSubtitle" fontWeight="500">
+          <SizableText size="$3" fontWeight="500" style={{ color: c.prefix }}>
             {suffix}
           </SizableText>
         )}
       </XStack>
 
       {hasError && (
-        <SizableText size="$2" color="$red9">
+        <SizableText size="$2" style={{ color: c.borderError }}>
           {error}
         </SizableText>
       )}
@@ -180,11 +170,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: '#0f172a',
     paddingVertical: 0,
     fontFamily: 'Inter-Regular',
-  },
-  disabled: {
-    color: '#94a3b8',
   },
 });

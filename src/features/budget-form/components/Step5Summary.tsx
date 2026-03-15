@@ -1,18 +1,18 @@
-import React from 'react';
-import { Share } from 'react-native';
+import React, { useState } from 'react';
+import { Alert } from 'react-native';
 import { YStack, XStack, SizableText, Button, Card, Separator } from 'tamagui';
 import {
-  CheckCircle, TrendingUp, Package, DollarSign, ReceiptText, FileDown, Tag,
+  CheckCircle, TrendingUp, Package, DollarSign, Tag, FileDown, Save,
 } from '@tamagui/lucide-icons';
-import type { BudgetFormData } from '../types';
+import type { BudgetFormData, Budget } from '../types';
 import {
   calculateBudgetSummary,
-  fmt,
   type RawMaterialCalc,
   type LaborCalc,
   type IndirectCostCalc,
 } from '../calculations';
 import { formatVE } from '../../../components/ui/InputCustom';
+import { exportBudgetPDF } from '../pdfExport';
 
 interface Props {
   data: BudgetFormData;
@@ -35,9 +35,7 @@ function SectionRow({ label, usd, bs }: { label: string; usd: number; bs: number
   );
 }
 
-function MetricCard({
-  icon, label, value, sub, backgroundColor, borderColor,
-}: {
+function MetricCard({ icon, label, value, sub, backgroundColor, borderColor }: {
   icon: React.ReactNode; label: string; value: string;
   sub?: string; backgroundColor: string; borderColor: string;
 }) {
@@ -57,23 +55,33 @@ function MetricCard({
 
 export function Step5Summary({ data, onSaveAndExport }: Props) {
   const s = calculateBudgetSummary(data);
+  const [exporting, setExporting] = useState(false);
 
-  const handleExport = async () => {
-    const text = [
-      `📊 ${data.name || 'Presupuesto FlowCost'}`,
-      ``,
-      `Costo Unitario:        $${formatVE(s.unitCostUSD)} | Bs. ${formatVE(s.unitCostBS)}`,
-      `Precio de Venta s/IVA: $${formatVE(s.salePriceWithoutVatUSD)} | Bs. ${formatVE(s.salePriceWithoutVatBS)}`,
-      `IVA (${data.vatPct}%):          $${formatVE(s.vatAmountUSD)} | Bs. ${formatVE(s.vatAmountBS)}`,
-      `Precio Final c/IVA:    $${formatVE(s.finalPriceUSD)} | Bs. ${formatVE(s.finalPriceBS)}`,
-      `Margen: ${formatVE(s.profitMarginPct, 1)}%  |  Utilidad: $${formatVE(s.profitAmountUSD)}`,
-      ``,
-      `MP: $${formatVE(s.totalRawMaterialsUSD)}  MO: $${formatVE(s.totalLaborUSD)}  CIF: $${formatVE(s.totalCIFUSD)}`,
-      `Costo Total Lote: $${formatVE(s.totalCostUSD)} | Bs. ${formatVE(s.totalCostBS)}`,
-    ].join('\n');
-
-    await Share.share({ message: text, title: data.name || 'Presupuesto FlowCost' });
+  // Guarda el presupuesto y luego exporta PDF por separado
+  // para evitar el error "An earlier share has not yet completed"
+  const handleSave = () => {
     onSaveAndExport();
+  };
+
+  const handleExportPDF = async () => {
+    setExporting(true);
+    try {
+      // Construye un objeto Budget temporal para pasárselo al exportador
+      const tempBudget: Budget = {
+        id:       'preview',
+        name:     data.name || 'Presupuesto',
+        date:     new Date().toISOString().split('T')[0],
+        totalUSD: s.totalCostUSD,
+        totalBS:  s.totalCostBS,
+        status:   'listo',
+        data,
+      };
+      await exportBudgetPDF(tempBudget);
+    } catch (e) {
+      Alert.alert('Error', 'No se pudo exportar el PDF.');
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -86,7 +94,7 @@ export function Step5Summary({ data, onSaveAndExport }: Props) {
         </SizableText>
       </XStack>
 
-      {/* Métricas clave 2x2 */}
+      {/* Métricas 2x2 */}
       <XStack gap="$3">
         <MetricCard
           icon={<Package size={14} color="$blue9" />}
@@ -121,15 +129,15 @@ export function Step5Summary({ data, onSaveAndExport }: Props) {
       </XStack>
 
       {/* Info general */}
-      <Card backgroundColor="$backgroundStrong" borderColor="$borderColor" borderWidth={1}
-        borderRadius="$4" padding="$4">
+      <Card backgroundColor="$backgroundStrong" borderColor="$borderColor"
+        borderWidth={1} borderRadius="$4" padding="$4">
         <XStack flexWrap="wrap" gap="$3">
           {[
             { label: 'Presupuesto',     value: data.name || '—' },
             { label: 'Unidad de Venta', value: s.saleUnit || '—' },
             { label: 'Tamaño de Lote',  value: `${s.lotQuantity} unid.` },
             { label: 'Tasa de Cambio',  value: `Bs. ${formatVE(s.exchangeRate)} / $` },
-          ].map((item) => (
+          ].map(item => (
             <YStack key={item.label} minWidth="45%" flex={1}>
               <SizableText size="$1" color="$colorSubtitle" textTransform="uppercase">
                 {item.label}
@@ -225,34 +233,20 @@ export function Step5Summary({ data, onSaveAndExport }: Props) {
         </Card>
       </YStack>
 
-      {/* Estructura de precio por unidad */}
+      {/* Precio por unidad */}
       <YStack>
         <SizableText size="$4" fontWeight="600" color="$color" marginBottom="$3">
           Estructura de Precio por Unidad
         </SizableText>
         <Card borderColor="$borderColor" borderWidth={1} borderRadius="$4" paddingHorizontal="$4">
-          <SectionRow
-            label={`Costo Unitario (Lote ÷ ${s.lotQuantity})`}
-            usd={s.unitCostUSD} bs={s.unitCostBS}
-          />
+          <SectionRow label={`Costo Unitario (Lote ÷ ${s.lotQuantity})`} usd={s.unitCostUSD} bs={s.unitCostBS} />
           <Separator />
-          <SectionRow
-            label={`Utilidad (${data.profitMarginPct}%)`}
-            usd={s.profitAmountUSD} bs={s.profitAmountUSD * s.exchangeRate}
-          />
+          <SectionRow label={`Utilidad (${data.profitMarginPct}%)`} usd={s.profitAmountUSD} bs={s.profitAmountUSD * s.exchangeRate} />
           <Separator />
-          {/* Precio de Venta = costo unitario + utilidad, SIN IVA */}
-          <SectionRow
-            label="Precio de Venta (sin IVA)"
-            usd={s.salePriceWithoutVatUSD} bs={s.salePriceWithoutVatBS}
-          />
+          <SectionRow label="Precio de Venta (sin IVA)" usd={s.salePriceWithoutVatUSD} bs={s.salePriceWithoutVatBS} />
           <Separator />
-          <SectionRow
-            label={`IVA (${data.vatPct}%)`}
-            usd={s.vatAmountUSD} bs={s.vatAmountBS}
-          />
+          <SectionRow label={`IVA (${data.vatPct}%)`} usd={s.vatAmountUSD} bs={s.vatAmountBS} />
           <Separator />
-          {/* Precio Final = precio de venta + IVA */}
           <XStack justifyContent="space-between" alignItems="center" paddingVertical="$3">
             <SizableText size="$4" fontWeight="700" color="$color">Precio Final al Cliente</SizableText>
             <XStack gap="$4">
@@ -267,11 +261,32 @@ export function Step5Summary({ data, onSaveAndExport }: Props) {
         </Card>
       </YStack>
 
-      {/* Botón exportar */}
-      <Button onPress={handleExport} backgroundColor="$blue10" borderRadius="$5" height="$6"
-        icon={<FileDown size={18} color="white" />} pressStyle={{ opacity: 0.85, scale: 0.98 }}>
-        <SizableText color="white" fontWeight="700">Guardar y Exportar</SizableText>
-      </Button>
+      {/* Botones — Guardar y Exportar PDF separados */}
+      <XStack gap="$3">
+        <Button
+          flex={1}
+          onPress={handleSave}
+          backgroundColor="$green9" borderRadius="$5" height="$6"
+          icon={<Save size={18} color="white" />}
+          pressStyle={{ opacity: 0.85, scale: 0.98 }}
+        >
+          <SizableText color="white" fontWeight="700">Guardar</SizableText>
+        </Button>
+
+        <Button
+          flex={1}
+          onPress={handleExportPDF}
+          disabled={exporting}
+          backgroundColor="$blue10" borderRadius="$5" height="$6"
+          icon={<FileDown size={18} color="white" />}
+          pressStyle={{ opacity: 0.85, scale: 0.98 }}
+          opacity={exporting ? 0.6 : 1}
+        >
+          <SizableText color="white" fontWeight="700">
+            {exporting ? 'Exportando...' : 'Exportar PDF'}
+          </SizableText>
+        </Button>
+      </XStack>
     </YStack>
   );
 }

@@ -1,11 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  YStack,
-  XStack,
-  SizableText,
-  Button,
-  Sheet,
-  ScrollView,
+  YStack, XStack, SizableText, Button, Sheet, ScrollView,
 } from 'tamagui';
 import { X, ChevronLeft, ChevronRight, Check } from '@tamagui/lucide-icons';
 
@@ -22,14 +17,16 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onSave: (budget: Budget) => void;
+  /** Si se pasa, el modal abre en modo edición con estos datos precargados */
+  editBudget?: Budget | null;
 }
 
 const STEPS = [
   { number: 1, title: 'Datos Generales', short: 'General' },
-  { number: 2, title: 'Materia Prima', short: 'MP' },
-  { number: 3, title: 'Mano de Obra', short: 'MO' },
+  { number: 2, title: 'Materia Prima',   short: 'MP' },
+  { number: 3, title: 'Mano de Obra',    short: 'MO' },
   { number: 4, title: 'Costos Indirectos', short: 'CIF' },
-  { number: 5, title: 'Resumen', short: 'Resumen' },
+  { number: 5, title: 'Resumen',         short: 'Resumen' },
 ];
 
 function validateStep(step: number, data: BudgetFormData): string | null {
@@ -60,10 +57,9 @@ function StepHeader({ step, onGoToStep }: { step: number; onGoToStep: (n: number
   return (
     <XStack alignItems="center">
       {STEPS.map((s, i) => {
-        const isComplete = step > s.number;
-        const isCurrent = step === s.number;
+        const isComplete  = step > s.number;
+        const isCurrent   = step === s.number;
         const canNavigate = s.number < step;
-
         return (
           <React.Fragment key={s.number}>
             <Button
@@ -73,21 +69,19 @@ function StepHeader({ step, onGoToStep }: { step: number; onGoToStep: (n: number
               paddingHorizontal="$2"
               paddingVertical="$1"
             >
-              <XStack alignItems="center" gap="$1.5">
-                <YStack
-                  width={24} height={24} borderRadius={12}
-                  alignItems="center" justifyContent="center"
-                  backgroundColor={isCurrent ? '$blue9' : isComplete ? '$blue3' : '$backgroundStrong'}
-                >
-                  {isComplete ? (
-                    <Check size={11} color="$blue9" />
-                  ) : (
-                    <SizableText size="$1" fontWeight="700" color={isCurrent ? 'white' : '$colorSubtitle'}>
-                      {s.number}
-                    </SizableText>
-                  )}
-                </YStack>
-              </XStack>
+              <YStack
+                width={24} height={24} borderRadius={12}
+                alignItems="center" justifyContent="center"
+                backgroundColor={isCurrent ? '$blue9' : isComplete ? '$blue3' : '$backgroundStrong'}
+              >
+                {isComplete ? (
+                  <Check size={11} color="$blue9" />
+                ) : (
+                  <SizableText size="$1" fontWeight="700" color={isCurrent ? 'white' : '$colorSubtitle'}>
+                    {s.number}
+                  </SizableText>
+                )}
+              </YStack>
             </Button>
             {i < STEPS.length - 1 && (
               <YStack flex={1} height={2} borderRadius={4}
@@ -100,13 +94,24 @@ function StepHeader({ step, onGoToStep }: { step: number; onGoToStep: (n: number
   );
 }
 
-export function BudgetFormModal({ isOpen, onClose, onSave }: Props) {
-  const [step, setStep] = useState(1);
-  const [data, setData] = useState<BudgetFormData>(INITIAL_FORM_DATA);
+export function BudgetFormModal({ isOpen, onClose, onSave, editBudget }: Props) {
+  const isEditing = !!editBudget;
+
+  const [step, setStep]   = useState(1);
+  const [data, setData]   = useState<BudgetFormData>(INITIAL_FORM_DATA);
   const [error, setError] = useState<string | null>(null);
 
+  // Cuando se abre en modo edición, precarga los datos
+  useEffect(() => {
+    if (isOpen && editBudget) {
+      setData(editBudget.data);
+      setStep(1);
+      setError(null);
+    }
+  }, [isOpen, editBudget]);
+
   const updateData = (updates: Partial<BudgetFormData>) => {
-    setData((prev) => ({ ...prev, ...updates }));
+    setData(prev => ({ ...prev, ...updates }));
     setError(null);
   };
 
@@ -114,12 +119,12 @@ export function BudgetFormModal({ isOpen, onClose, onSave }: Props) {
     const err = validateStep(step, data);
     if (err) { setError(err); return; }
     setError(null);
-    setStep((s) => Math.min(s + 1, 5));
+    setStep(s => Math.min(s + 1, 5));
   };
 
   const goPrev = () => {
     setError(null);
-    setStep((s) => Math.max(s - 1, 1));
+    setStep(s => Math.max(s - 1, 1));
   };
 
   const goToStep = (n: number) => {
@@ -129,12 +134,13 @@ export function BudgetFormModal({ isOpen, onClose, onSave }: Props) {
   const handleSaveAndExport = () => {
     const summary = calculateBudgetSummary(data);
     const budget: Budget = {
-      id: Math.random().toString(36).slice(2),
-      name: data.name,
-      date: new Date().toISOString().split('T')[0],
+      // En edición conserva el id y fecha original; en nuevo genera uno nuevo
+      id:       editBudget?.id   ?? Math.random().toString(36).slice(2),
+      date:     editBudget?.date ?? new Date().toISOString().split('T')[0],
+      name:     data.name,
       totalUSD: summary.totalCostUSD,
-      totalBS: summary.totalCostBS,
-      status: 'listo',
+      totalBS:  summary.totalCostBS,
+      status:   editBudget?.status ?? 'listo',
       data,
     };
     onSave(budget);
@@ -164,7 +170,7 @@ export function BudgetFormModal({ isOpen, onClose, onSave }: Props) {
   return (
     <Sheet
       open={isOpen}
-      onOpenChange={(open) => { if (!open) handleClose(); }}
+      onOpenChange={open => { if (!open) handleClose(); }}
       snapPoints={[100]}
       dismissOnSnapToBottom={false}
       modal
@@ -175,61 +181,48 @@ export function BudgetFormModal({ isOpen, onClose, onSave }: Props) {
         enterStyle={{ opacity: 0 }}
         exitStyle={{ opacity: 0 }}
       />
-
-      {/* Sin Sheet.Handle — el modal ocupa 100% y tiene su propio botón de cierre */}
       <Sheet.Frame backgroundColor="$background" flex={1}>
 
-        {/* ── Header ── */}
+        {/* Header */}
         <YStack
-          paddingHorizontal="$5"
-          paddingTop="$10"
-          paddingBottom="$3"
-          gap="$3"
-          borderBottomWidth={1}
-          borderBottomColor="$borderColor"
+          paddingHorizontal="$5" paddingTop="$10" paddingBottom="$3"
+          gap="$3" borderBottomWidth={1} borderBottomColor="$borderColor"
         >
           <XStack justifyContent="space-between" alignItems="flex-start">
             <YStack gap="$1">
               <XStack alignItems="center" gap="$2">
                 <YStack
                   width={20} height={20} borderRadius="$2"
-                  backgroundColor="$blue9"
+                  backgroundColor={isEditing ? '$orange9' : '$blue9'}
                   alignItems="center" justifyContent="center"
                 >
                   <SizableText size="$1" fontWeight="700" color="white">FC</SizableText>
                 </YStack>
                 <SizableText size="$5" fontWeight="700" color="$color">
-                  Nuevo Presupuesto
+                  {isEditing ? 'Editar Presupuesto' : 'Nuevo Presupuesto'}
                 </SizableText>
               </XStack>
               <SizableText size="$2" color="$colorSubtitle">
                 Paso {step} de {STEPS.length} — {STEPS[step - 1].title}
               </SizableText>
             </YStack>
-
-            <Button
-              size="$3" circular chromeless
-              onPress={handleClose}
-              icon={<X size={18} />}
-            />
+            <Button size="$3" circular chromeless onPress={handleClose} icon={<X size={18} />} />
           </XStack>
-
           <StepHeader step={step} onGoToStep={goToStep} />
         </YStack>
 
-        {/* ── Error ── */}
+        {/* Error */}
         {error && (
           <YStack
             marginHorizontal="$5" marginTop="$3"
             paddingHorizontal="$4" paddingVertical="$3"
-            backgroundColor="$red3" borderColor="$red6"
-            borderWidth={1} borderRadius="$4"
+            backgroundColor="$red3" borderColor="$red6" borderWidth={1} borderRadius="$4"
           >
             <SizableText size="$3" color="$red9">{error}</SizableText>
           </YStack>
         )}
 
-        {/* ── Contenido scrolleable ── */}
+        {/* Contenido */}
         <Sheet.ScrollView
           flex={1}
           contentContainerStyle={{ padding: 20, paddingBottom: 16 }}
@@ -239,10 +232,9 @@ export function BudgetFormModal({ isOpen, onClose, onSave }: Props) {
           {currentStepContent()}
         </Sheet.ScrollView>
 
-        {/* ── Footer ── */}
+        {/* Footer */}
         <XStack
-          paddingHorizontal="$5" paddingVertical="$4"
-          paddingBottom="$6"
+          paddingHorizontal="$5" paddingVertical="$4" paddingBottom="$6"
           borderTopWidth={1} borderTopColor="$borderColor"
           justifyContent="space-between" alignItems="center"
           backgroundColor="$background"
@@ -254,9 +246,7 @@ export function BudgetFormModal({ isOpen, onClose, onSave }: Props) {
             icon={<ChevronLeft size={16} color={step === 1 ? '$colorPlaceholder' : '$colorSubtitle'} />}
             opacity={step === 1 ? 0.4 : 1}
           >
-            <SizableText color={step === 1 ? '$colorPlaceholder' : '$colorSubtitle'}>
-              Anterior
-            </SizableText>
+            <SizableText color={step === 1 ? '$colorPlaceholder' : '$colorSubtitle'}>Anterior</SizableText>
           </Button>
 
           <StepDots step={step} />
@@ -273,11 +263,14 @@ export function BudgetFormModal({ isOpen, onClose, onSave }: Props) {
           ) : (
             <Button
               onPress={handleSaveAndExport}
-              backgroundColor="$green9" borderRadius="$4" paddingHorizontal="$5"
+              backgroundColor={isEditing ? '$orange9' : '$green9'}
+              borderRadius="$4" paddingHorizontal="$5"
               icon={<Check size={16} color="white" />}
               pressStyle={{ opacity: 0.85, scale: 0.97 }}
             >
-              <SizableText color="white" fontWeight="600">Finalizar</SizableText>
+              <SizableText color="white" fontWeight="600">
+                {isEditing ? 'Guardar Cambios' : 'Finalizar'}
+              </SizableText>
             </Button>
           )}
         </XStack>

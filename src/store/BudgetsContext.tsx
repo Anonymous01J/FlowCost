@@ -1,21 +1,9 @@
-/**
- * budgetsContext.tsx
- * Store de presupuestos con persistencia en AsyncStorage.
- *
- * Instalación requerida:
- *   expo install @react-native-async-storage/async-storage
- *
- * En _layout.tsx, envuelve la app:
- *   import { BudgetsProvider } from '../src/store/budgetsContext';
- *   <BudgetsProvider>...</BudgetsProvider>
- */
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Budget } from '../features/budget-form/types';
 
 const STORAGE_KEY = 'flowcost:budgets';
 
-// ─── Datos demo (se usan solo si AsyncStorage está vacío) ────────────────────
 const MOCK_BUDGETS: Budget[] = [
   {
     id: '1',
@@ -61,42 +49,39 @@ const MOCK_BUDGETS: Budget[] = [
   },
 ];
 
-// ─── Tipos ────────────────────────────────────────────────────────────────────
 interface BudgetsContextValue {
   budgets: Budget[];
   loading: boolean;
   addBudget: (budget: Budget) => Promise<void>;
+  updateBudget: (budget: Budget) => Promise<void>;
   updateBudgetStatus: (id: string, status: Budget['status']) => Promise<void>;
   deleteBudget: (id: string) => Promise<void>;
 }
 
 const BudgetsContext = createContext<BudgetsContextValue | null>(null);
 
-// ─── Helpers de AsyncStorage ──────────────────────────────────────────────────
 async function loadFromStorage(): Promise<Budget[]> {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw) as Budget[];
   } catch (e) {
-    console.warn('[budgetsContext] Error leyendo AsyncStorage:', e);
+    console.warn('[BudgetsContext] Error leyendo AsyncStorage:', e);
   }
-  return MOCK_BUDGETS; // primera vez → carga los datos demo
+  return MOCK_BUDGETS;
 }
 
 async function saveToStorage(budgets: Budget[]): Promise<void> {
   try {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(budgets));
   } catch (e) {
-    console.warn('[budgetsContext] Error guardando en AsyncStorage:', e);
+    console.warn('[BudgetsContext] Error guardando en AsyncStorage:', e);
   }
 }
 
-// ─── Provider ────────────────────────────────────────────────────────────────
 export function BudgetsProvider({ children }: { children: React.ReactNode }) {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Carga inicial
   useEffect(() => {
     loadFromStorage().then(data => {
       setBudgets(data);
@@ -104,7 +89,6 @@ export function BudgetsProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  // Helper: actualiza estado + persiste
   const persist = useCallback(async (next: Budget[]) => {
     setBudgets(next);
     await saveToStorage(next);
@@ -114,8 +98,13 @@ export function BudgetsProvider({ children }: { children: React.ReactNode }) {
     await persist([budget, ...budgets]);
   }, [budgets, persist]);
 
+  // Actualiza un presupuesto existente manteniendo su posición en la lista
+  const updateBudget = useCallback(async (budget: Budget) => {
+    await persist(budgets.map(b => b.id === budget.id ? budget : b));
+  }, [budgets, persist]);
+
   const updateBudgetStatus = useCallback(async (id: string, status: Budget['status']) => {
-    await persist(budgets.map(b => (b.id === id ? { ...b, status } : b)));
+    await persist(budgets.map(b => b.id === id ? { ...b, status } : b));
   }, [budgets, persist]);
 
   const deleteBudget = useCallback(async (id: string) => {
@@ -123,13 +112,12 @@ export function BudgetsProvider({ children }: { children: React.ReactNode }) {
   }, [budgets, persist]);
 
   return (
-    <BudgetsContext.Provider value={{ budgets, loading, addBudget, updateBudgetStatus, deleteBudget }}>
+    <BudgetsContext.Provider value={{ budgets, loading, addBudget, updateBudget, updateBudgetStatus, deleteBudget }}>
       {children}
     </BudgetsContext.Provider>
   );
 }
 
-// ─── Hook ─────────────────────────────────────────────────────────────────────
 export function useBudgets() {
   const ctx = useContext(BudgetsContext);
   if (!ctx) throw new Error('useBudgets debe usarse dentro de <BudgetsProvider>');
