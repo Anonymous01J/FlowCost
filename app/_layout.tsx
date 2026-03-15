@@ -6,6 +6,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import config from '../tamagui.config';
 import { ThemeProvider } from '../src/core/theme/ThemeProvider';
 import { BudgetsProvider } from '../src/store/BudgetsContext';
+import { CompanyProvider } from '../src/store/CompanyContext';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -31,9 +32,11 @@ export default function RootLayout() {
   return (
     <TamaguiProvider config={config} defaultTheme="light">
       <ThemeProvider>
-        <BudgetsProvider>
-          <Stack screenOptions={{ headerShown: false }} />
-        </BudgetsProvider>
+        <CompanyProvider>
+          <BudgetsProvider>
+            <Stack screenOptions={{ headerShown: false }} />
+          </BudgetsProvider>
+        </CompanyProvider>
       </ThemeProvider>
     </TamaguiProvider>
   );

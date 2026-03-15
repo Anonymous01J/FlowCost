@@ -2,22 +2,26 @@ import React, { useState } from 'react';
 import { Alert } from 'react-native';
 import { YStack, XStack, SizableText, Card, Button, Sheet, Separator, Spinner } from 'tamagui';
 import {
-  CheckCircle, Clock, MoreHorizontal, Trash2, RefreshCw, Pencil, FileDown,
+  CheckCircle, Clock, MoreHorizontal, Trash2, RefreshCw, Pencil, FileDown, Copy,
 } from '@tamagui/lucide-icons';
 import type { Budget } from '../../features/budget-form/types';
 import { formatVE } from './InputCustom';
 import { exportBudgetPDF } from '../../features/budget-form/pdfExport';
+import { useCompany } from '../../store/CompanyContext';
 
 interface Props {
   budget: Budget;
-  onDelete?: (id: string) => void;
+  onDelete?:       (id: string) => void;
   onToggleStatus?: (id: string) => void;
-  onEdit?: (budget: Budget) => void;
+  onEdit?:         (budget: Budget) => void;
+  /** Abre el modal de creación con datos precargados pero nombre único */
+  onCopy?:         (budget: Budget) => void;
 }
 
-export function BudgetCard({ budget, onDelete, onToggleStatus, onEdit }: Props) {
-  const [menuOpen,    setMenuOpen]    = useState(false);
-  const [exporting,   setExporting]   = useState(false);
+export function BudgetCard({ budget, onDelete, onToggleStatus, onEdit, onCopy }: Props) {
+  const [menuOpen,  setMenuOpen]  = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const { profile } = useCompany();
 
   const formattedDate = new Date(budget.date + 'T00:00:00').toLocaleDateString('es-VE', {
     day: '2-digit', month: 'short', year: 'numeric',
@@ -29,22 +33,35 @@ export function BudgetCard({ budget, onDelete, onToggleStatus, onEdit }: Props) 
     setMenuOpen(false);
     setExporting(true);
     try {
-      await exportBudgetPDF(budget);
-    } catch (e) {
-      Alert.alert('Error', 'No se pudo exportar el PDF. Verifica que expo-print y expo-sharing estén instalados.');
+      await exportBudgetPDF(budget, profile);
+    } catch (e: any) {
+      Alert.alert('Error al exportar', e?.message ?? 'Ocurrió un error inesperado.');
     } finally {
       setExporting(false);
     }
   };
 
+  const menuItem = (
+    label: string,
+    color: string,
+    Icon: React.ComponentType<any>,
+    onPress: () => void,
+  ) => (
+    <Button
+      onPress={onPress}
+      chromeless justifyContent="flex-start"
+      icon={<Icon size={16} color={color} />}
+      height="$5"
+    >
+      <SizableText size="$4" style={{ color }}>{label}</SizableText>
+    </Button>
+  );
+
   return (
     <>
       <Card
-        borderColor="$borderColor"
-        borderWidth={1}
-        borderRadius="$5"
-        padding="$4"
-        backgroundColor="$background"
+        borderColor="$borderColor" borderWidth={1} borderRadius="$5"
+        padding="$4" backgroundColor="$background"
       >
         {/* Header */}
         <XStack justifyContent="space-between" alignItems="flex-start" gap="$2" marginBottom="$3">
@@ -56,7 +73,6 @@ export function BudgetCard({ budget, onDelete, onToggleStatus, onEdit }: Props) 
           </YStack>
 
           <XStack alignItems="center" gap="$2" flexShrink={0}>
-            {/* Badge estado */}
             <XStack
               backgroundColor={isListo ? '$green3' : '$orange3'}
               borderColor={isListo ? '$green6' : '$orange6'}
@@ -72,7 +88,6 @@ export function BudgetCard({ budget, onDelete, onToggleStatus, onEdit }: Props) 
               </SizableText>
             </XStack>
 
-            {/* Spinner de exportación o botón menú */}
             {exporting ? (
               <Spinner size="small" color="$blue9" />
             ) : (
@@ -85,7 +100,7 @@ export function BudgetCard({ budget, onDelete, onToggleStatus, onEdit }: Props) 
           </XStack>
         </XStack>
 
-        {/* Footer totales */}
+        {/* Footer */}
         <XStack
           justifyContent="space-between" alignItems="flex-end"
           borderTopWidth={1} borderTopColor="$borderColor"
@@ -110,66 +125,40 @@ export function BudgetCard({ budget, onDelete, onToggleStatus, onEdit }: Props) 
       <Sheet
         open={menuOpen}
         onOpenChange={setMenuOpen}
-        snapPoints={[50]}
+        snapPoints={[58]}
         dismissOnSnapToBottom
         modal
         zIndex={300000}
       >
-        <Sheet.Overlay backgroundColor="rgba(0,0,0,0.4)" enterStyle={{ opacity: 0 }} exitStyle={{ opacity: 0 }} />
+        <Sheet.Overlay backgroundColor="rgba(0,0,0,0.4)"
+          enterStyle={{ opacity: 0 }} exitStyle={{ opacity: 0 }} />
         <Sheet.Handle />
-        <Sheet.Frame padding="$4" gap="$2">
-          <SizableText size="$3" fontWeight="700" color="$colorSubtitle" paddingBottom="$1">
+        <Sheet.Frame padding="$4" gap="$1">
+          <SizableText size="$3" fontWeight="700" color="$colorSubtitle" paddingBottom="$2">
             {budget.name}
           </SizableText>
           <Separator />
 
-          {/* Editar */}
-          <Button
-            onPress={() => { setMenuOpen(false); onEdit?.(budget); }}
-            chromeless justifyContent="flex-start"
-            icon={<Pencil size={16} color="$blue9" />}
-            height="$5"
-          >
-            <SizableText size="$4" color="$blue9">Editar presupuesto</SizableText>
-          </Button>
-
+          {menuItem('Editar presupuesto', '#2563eb', Pencil,
+            () => { setMenuOpen(false); onEdit?.(budget); })}
           <Separator />
 
-          {/* Exportar PDF */}
-          <Button
-            onPress={handleExport}
-            chromeless justifyContent="flex-start"
-            icon={<FileDown size={16} color="$purple9" />}
-            height="$5"
-          >
-            <SizableText size="$4" color="$purple9">Exportar PDF</SizableText>
-          </Button>
-
+          {menuItem('Hacer copia', '#0891b2', Copy,
+            () => { setMenuOpen(false); onCopy?.(budget); })}
           <Separator />
 
-          {/* Cambiar estado */}
-          <Button
-            onPress={() => { onToggleStatus?.(budget.id); setMenuOpen(false); }}
-            chromeless justifyContent="flex-start"
-            icon={<RefreshCw size={16} color="$color" />}
-            height="$5"
-          >
-            <SizableText size="$4" color="$color">
-              {isListo ? '↩ Marcar En Desarrollo' : '✓ Marcar como Listo'}
-            </SizableText>
-          </Button>
-
+          {menuItem('Exportar PDF', '#7c3aed', FileDown, handleExport)}
           <Separator />
 
-          {/* Eliminar */}
-          <Button
-            onPress={() => { onDelete?.(budget.id); setMenuOpen(false); }}
-            chromeless justifyContent="flex-start"
-            icon={<Trash2 size={16} color="$red9" />}
-            height="$5"
-          >
-            <SizableText size="$4" color="$red9">Eliminar</SizableText>
-          </Button>
+          {menuItem(
+            isListo ? '↩ Marcar En Desarrollo' : '✓ Marcar como Listo',
+            '#64748b', RefreshCw,
+            () => { onToggleStatus?.(budget.id); setMenuOpen(false); },
+          )}
+          <Separator />
+
+          {menuItem('Eliminar', '#ef4444', Trash2,
+            () => { onDelete?.(budget.id); setMenuOpen(false); })}
         </Sheet.Frame>
       </Sheet>
     </>

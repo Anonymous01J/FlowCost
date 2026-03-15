@@ -1,18 +1,59 @@
-/**
- * pdfExport.ts
- *
- * - En iOS/Android: usa expo-print + expo-sharing (PDF real)
- * - En Web:         abre el HTML en una nueva ventana y llama window.print()
- *                   El navegador genera el PDF desde el diálogo de impresión nativo
- */
 import { Platform } from 'react-native';
 import { calculateBudgetSummary } from './calculations';
 import { formatVE } from '../../components/ui/InputCustom';
 import type { Budget } from './types';
+import type { CompanyProfile } from '../../store/CompanyContext';
 
-// ─── HTML del presupuesto ─────────────────────────────────────────────────────
+// ─── Cabecera corporativa HTML ────────────────────────────────────────────────
 
-function buildHtml(budget: Budget): string {
+function buildCompanyHeader(company: CompanyProfile | null): string {
+  if (!company || !company.name) {
+    // Sin perfil de empresa: cabecera simple con logo de la app
+    return `
+    <div class="header">
+      <div class="logo-wrap">
+        <div class="logo-badge">FC</div>
+        <div>
+          <div class="app-name">FlowCost</div>
+          <div class="app-sub">Presupuesto de Costos de Produccion</div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  const logoHtml = company.logoBase64
+    ? `<img src="${company.logoBase64}" style="width:72px;height:72px;object-fit:contain;border-radius:8px;" />`
+    : `<div class="logo-badge">FC</div>`;
+
+  const phones = (company.phones ?? [])
+    .filter(p => p.number)
+    .map(p => {
+      const href = p.type === 'whatsapp'
+        ? `https://wa.me/${p.number.replace(/\D/g, '')}`
+        : `tel:${p.number}`;
+      const icon = p.type === 'whatsapp' ? 'WA' : 'Tel';
+      return `<div><a href="${href}" style="color:#2563eb;text-decoration:none;">${icon}: ${p.number}</a></div>`;
+    }).join('');
+
+  return `
+  <div class="company-header">
+    <div class="company-left">
+      ${logoHtml}
+    </div>
+    <div class="company-right">
+      <div class="company-name">${company.name}</div>
+      ${company.rif     ? `<div class="company-detail">RIF: ${company.rif}</div>` : ''}
+      ${company.address ? `<div class="company-detail">${company.address}</div>` : ''}
+      ${phones}
+      ${company.email   ? `<div class="company-detail"><a href="mailto:${company.email}" style="color:#2563eb;text-decoration:none;">${company.email}</a></div>` : ''}
+    </div>
+  </div>
+  <hr class="company-divider" />`;
+}
+
+// ─── HTML completo ────────────────────────────────────────────────────────────
+
+function buildHtml(budget: Budget, company: CompanyProfile | null): string {
   const d = budget.data;
   const s = calculateBudgetSummary(d);
 
@@ -54,26 +95,37 @@ function buildHtml(budget: Budget): string {
     .no-print { display: none !important; }
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Helvetica, Arial, sans-serif; font-size: 12px; color: #1e293b; padding: 32px; max-width: 900px; margin: 0 auto; }
+  body { font-family: Helvetica, Arial, sans-serif; font-size: 12px;
+         color: #1e293b; padding: 32px; max-width: 900px; margin: 0 auto; }
 
-  /* Print button — solo en web */
   .print-btn { display: block; margin: 0 auto 24px auto; padding: 10px 28px;
                background: #2563eb; color: white; border: none; border-radius: 8px;
                font-size: 14px; font-weight: 700; cursor: pointer; }
   .print-btn:hover { background: #1d4ed8; }
 
-  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
-  .logo-wrap { display: flex; align-items: center; gap: 10px; }
-  .logo-badge { display: inline-flex; width: 36px; height: 36px; background: #2563eb; border-radius: 8px;
-                align-items: center; justify-content: center;
-                color: white; font-weight: 800; font-size: 13px; flex-shrink: 0; }
-  .app-name { font-size: 20px; font-weight: 800; }
-  .app-sub  { font-size: 11px; color: #64748b; }
-  .budget-title { text-align: right; }
-  .budget-title h1 { font-size: 16px; font-weight: 700; }
-  .budget-title p  { font-size: 11px; color: #64748b; margin-top: 3px; }
+  /* Cabecera corporativa */
+  .company-header { display: flex; align-items: flex-start; gap: 20px; margin-bottom: 16px; }
+  .company-left  { flex-shrink: 0; }
+  .company-right { flex: 1; }
+  .company-name  { font-size: 18px; font-weight: 800; color: #1e293b; margin-bottom: 4px; }
+  .company-detail { font-size: 11px; color: #64748b; margin-top: 2px; }
+  .company-divider { border: none; border-top: 2px solid #e2e8f0; margin: 16px 0 20px 0; }
 
-  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 24px; }
+  /* Logo badge fallback */
+  .logo-badge { display: inline-flex; width: 64px; height: 64px; background: #2563eb;
+                border-radius: 8px; align-items: center; justify-content: center;
+                color: white; font-weight: 800; font-size: 18px; flex-shrink: 0; }
+
+  /* Cabecera del presupuesto */
+  .doc-header { display: flex; justify-content: space-between; align-items: flex-start;
+                background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;
+                padding: 16px; margin-bottom: 24px; }
+  .doc-title h1 { font-size: 15px; font-weight: 700; }
+  .doc-title p  { font-size: 11px; color: #64748b; margin-top: 3px; }
+  .doc-badge { background: #2563eb; color: white; font-size: 10px; font-weight: 700;
+               padding: 4px 12px; border-radius: 20px; text-transform: uppercase; }
+
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
   .metric { border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; }
   .metric-label { font-size: 9px; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px; }
   .metric-value { font-size: 15px; font-weight: 700; }
@@ -85,7 +137,7 @@ function buildHtml(budget: Budget): string {
 
   .info-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
               background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;
-              padding: 12px 16px; margin-bottom: 24px; }
+              padding: 12px 16px; margin-bottom: 20px; }
   .info-item-label { font-size: 9px; text-transform: uppercase; color: #94a3b8; }
   .info-item-value { font-size: 12px; font-weight: 600; margin-top: 2px; }
 
@@ -114,19 +166,15 @@ function buildHtml(budget: Budget): string {
 
 <button class="print-btn no-print" onclick="window.print()">Guardar como PDF / Imprimir</button>
 
-<div class="header">
-  <div class="logo-wrap">
-    <div class="logo-badge">FC</div>
-    <div>
-      <div class="app-name">FlowCost</div>
-      <div class="app-sub">Presupuesto de Costos de Produccion</div>
-    </div>
-  </div>
-  <div class="budget-title">
+${buildCompanyHeader(company)}
+
+<div class="doc-header">
+  <div class="doc-title">
     <h1>${d.name || 'Presupuesto'}</h1>
     <p>Generado el ${new Date(budget.date + 'T00:00:00').toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
     <p>Tasa de cambio: Bs. ${formatVE(s.exchangeRate)} / $</p>
   </div>
+  <div class="doc-badge">Presupuesto</div>
 </div>
 
 <div class="metrics">
@@ -260,7 +308,7 @@ function buildHtml(budget: Budget): string {
 </div>
 
 <div class="footer">
-  <span>FlowCost - Presupuesto generado automaticamente</span>
+  <span>${company?.name ? company.name + ' — ' : ''}FlowCost</span>
   <span>${d.name} | ${new Date().toLocaleDateString('es-VE')}</span>
 </div>
 
@@ -270,36 +318,26 @@ function buildHtml(budget: Budget): string {
 
 // ─── Export principal ─────────────────────────────────────────────────────────
 
-export async function exportBudgetPDF(budget: Budget): Promise<void> {
+export async function exportBudgetPDF(
+  budget: Budget,
+  company: CompanyProfile | null = null,
+): Promise<void> {
+  const html = buildHtml(budget, company);
+
   if (Platform.OS === 'web') {
-    // En web: abre una nueva ventana con el HTML del presupuesto.
-    // El usuario puede guardar como PDF desde el diálogo de impresión del navegador
-    // (Ctrl+P / Cmd+P → "Guardar como PDF")
-    const html = buildHtml(budget);
     const win = window.open('', '_blank');
-    if (!win) {
-      throw new Error('El navegador bloqueó la ventana emergente. Permite pop-ups para esta página.');
-    }
+    if (!win) throw new Error('El navegador bloqueó la ventana emergente. Permite pop-ups para esta pagina.');
     win.document.write(html);
     win.document.close();
-    // Pequeño delay para que el navegador termine de renderizar antes de abrir print
     setTimeout(() => win.print(), 500);
     return;
   }
 
-  // En iOS / Android: usa expo-print para generar PDF real
-  const { default: Print } = await import('expo-print') as any;
+  const { default: Print }   = await import('expo-print') as any;
   const { default: Sharing } = await import('expo-sharing') as any;
 
-  const html = buildHtml(budget);
-  const result = await Print.printToFileAsync({
-    html,
-    base64: false,
-    width: 595,
-    height: 842,
-  });
-
-  if (!result?.uri) throw new Error('expo-print no generó el archivo');
+  const result = await Print.printToFileAsync({ html, base64: false, width: 595, height: 842 });
+  if (!result?.uri) throw new Error('expo-print no genero el archivo');
 
   const canShare = await Sharing.isAvailableAsync();
   if (canShare) {
