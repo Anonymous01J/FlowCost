@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "--legacy-peer-deps": "^0.0.1-security.6",
+    "@blazejkustra/react-native-onboarding": "^1.0.0",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@tamagui/animations-moti": "^2.0.0-rc.16",
     "@tamagui/config": "^2.0.0-rc.16",

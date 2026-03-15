@@ -3,12 +3,33 @@ import { TamaguiProvider } from 'tamagui';
 import { useFonts } from 'expo-font';
 import { useEffect } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
+import { View } from 'react-native';
 import config from '../tamagui.config';
 import { ThemeProvider } from '../src/core/theme/ThemeProvider';
 import { BudgetsProvider } from '../src/store/BudgetsContext';
 import { CompanyProvider } from '../src/store/CompanyContext';
+import { OnboardingProvider, useOnboarding } from '../src/store/OnboardingContext';
+import FlowCostOnboarding from '../src/features/onboarding/FlowCostOnboarding';
 
 SplashScreen.preventAutoHideAsync();
+
+// Envuelve el Stack con la lógica de onboarding
+function AppContent() {
+  const { hasSeenOnboarding, loading } = useOnboarding();
+
+  if (loading) return null;
+
+  // Primera vez → muestra onboarding a pantalla completa
+  if (!hasSeenOnboarding) {
+    return (
+      <View style={{ flex: 1 }}>
+        <FlowCostOnboarding />
+      </View>
+    );
+  }
+
+  return <Stack screenOptions={{ headerShown: false }} />;
+}
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -32,11 +53,13 @@ export default function RootLayout() {
   return (
     <TamaguiProvider config={config} defaultTheme="light">
       <ThemeProvider>
-        <CompanyProvider>
-          <BudgetsProvider>
-            <Stack screenOptions={{ headerShown: false }} />
-          </BudgetsProvider>
-        </CompanyProvider>
+        <OnboardingProvider>
+          <CompanyProvider>
+            <BudgetsProvider>
+              <AppContent />
+            </BudgetsProvider>
+          </CompanyProvider>
+        </OnboardingProvider>
       </ThemeProvider>
     </TamaguiProvider>
   );

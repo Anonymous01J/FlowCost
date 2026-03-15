@@ -170,7 +170,7 @@ ${buildCompanyHeader(company)}
 
 <div class="doc-header">
   <div class="doc-title">
-    <h1>${d.name || 'Presupuesto'}</h1>
+    <h1>${budget.number ? '#' + budget.number + ' — ' : ''}${d.name || 'Presupuesto'}</h1>
     <p>Generado el ${new Date(budget.date + 'T00:00:00').toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
     <p>Tasa de cambio: Bs. ${formatVE(s.exchangeRate)} / $</p>
   </div>

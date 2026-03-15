@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  YStack, XStack, SizableText, Button, Sheet, ScrollView,
+  YStack, XStack, SizableText, Button, Sheet,
 } from 'tamagui';
-import { X, ChevronLeft, ChevronRight, Check } from '@tamagui/lucide-icons';
+import { X, ChevronLeft, ChevronRight, Check, Copy } from '@tamagui/lucide-icons';
 
 import type { BudgetFormData, Budget } from './types';
 import { INITIAL_FORM_DATA } from './types';
@@ -17,20 +17,20 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onSave: (budget: Budget) => void;
-  /** Si se pasa, el modal abre en modo edición con estos datos precargados */
   editBudget?: Budget | null;
+  isCopyMode?: boolean;
 }
 
 const STEPS = [
-  { number: 1, title: 'Datos Generales', short: 'General' },
-  { number: 2, title: 'Materia Prima',   short: 'MP' },
-  { number: 3, title: 'Mano de Obra',    short: 'MO' },
-  { number: 4, title: 'Costos Indirectos', short: 'CIF' },
-  { number: 5, title: 'Resumen',         short: 'Resumen' },
+  { number: 1, title: 'Datos Generales',    short: 'General' },
+  { number: 2, title: 'Materia Prima',       short: 'MP' },
+  { number: 3, title: 'Mano de Obra',        short: 'MO' },
+  { number: 4, title: 'Costos Indirectos',   short: 'CIF' },
+  { number: 5, title: 'Resumen',             short: 'Resumen' },
 ];
 
 function validateStep(step: number, data: BudgetFormData): string | null {
-  if (step === 1 && !data.name.trim()) return 'El nombre del presupuesto es obligatorio.';
+  if (step === 1 && !data.name.trim())     return 'El nombre del presupuesto es obligatorio.';
   if (step === 1 && data.exchangeRate <= 0) return 'La tasa de cambio debe ser mayor a 0.';
   return null;
 }
@@ -38,16 +38,10 @@ function validateStep(step: number, data: BudgetFormData): string | null {
 function StepDots({ step }: { step: number }) {
   return (
     <XStack gap="$2" alignItems="center" justifyContent="center">
-      {STEPS.map((s) => (
-        <YStack
-          key={s.number}
-          height={6}
-          width={s.number === step ? 20 : 6}
-          borderRadius={10}
-          backgroundColor={
-            s.number === step ? '$blue9' : s.number < step ? '$blue6' : '$borderColor'
-          }
-        />
+      {STEPS.map(s => (
+        <YStack key={s.number} height={6}
+          width={s.number === step ? 20 : 6} borderRadius={10}
+          backgroundColor={s.number === step ? '$blue9' : s.number < step ? '$blue6' : '$borderColor'} />
       ))}
     </XStack>
   );
@@ -64,23 +58,17 @@ function StepHeader({ step, onGoToStep }: { step: number; onGoToStep: (n: number
           <React.Fragment key={s.number}>
             <Button
               onPress={() => canNavigate && onGoToStep(s.number)}
-              disabled={!canNavigate}
-              chromeless
-              paddingHorizontal="$2"
-              paddingVertical="$1"
+              disabled={!canNavigate} chromeless
+              paddingHorizontal="$2" paddingVertical="$1"
             >
-              <YStack
-                width={24} height={24} borderRadius={12}
+              <YStack width={24} height={24} borderRadius={12}
                 alignItems="center" justifyContent="center"
-                backgroundColor={isCurrent ? '$blue9' : isComplete ? '$blue3' : '$backgroundStrong'}
-              >
-                {isComplete ? (
-                  <Check size={11} color="$blue9" />
-                ) : (
-                  <SizableText size="$1" fontWeight="700" color={isCurrent ? 'white' : '$colorSubtitle'}>
-                    {s.number}
-                  </SizableText>
-                )}
+                backgroundColor={isCurrent ? '$blue9' : isComplete ? '$blue3' : '$backgroundStrong'}>
+                {isComplete
+                  ? <Check size={11} color="$blue9" />
+                  : <SizableText size="$1" fontWeight="700"
+                      color={isCurrent ? 'white' : '$colorSubtitle'}>{s.number}</SizableText>
+                }
               </YStack>
             </Button>
             {i < STEPS.length - 1 && (
@@ -94,20 +82,23 @@ function StepHeader({ step, onGoToStep }: { step: number; onGoToStep: (n: number
   );
 }
 
-export function BudgetFormModal({ isOpen, onClose, onSave, editBudget }: Props) {
-  const isEditing = !!editBudget;
+export function BudgetFormModal({ isOpen, onClose, onSave, editBudget, isCopyMode = false }: Props) {
+  const isEditing = !!editBudget?.id && !isCopyMode;
 
-  const [step, setStep]   = useState(1);
-  const [data, setData]   = useState<BudgetFormData>(INITIAL_FORM_DATA);
+  const [step,  setStep]  = useState(1);
+  const [data,  setData]  = useState<BudgetFormData>(INITIAL_FORM_DATA);
   const [error, setError] = useState<string | null>(null);
 
-  // Cuando se abre en modo edición, precarga los datos
+  // Carga datos cuando el sheet abre — no usa setTimeout
   useEffect(() => {
-    if (isOpen && editBudget) {
+    if (!isOpen) return;
+    if (editBudget) {
       setData(editBudget.data);
-      setStep(1);
-      setError(null);
+    } else {
+      setData(INITIAL_FORM_DATA);
     }
+    setStep(1);
+    setError(null);
   }, [isOpen, editBudget]);
 
   const updateData = (updates: Partial<BudgetFormData>) => {
@@ -134,26 +125,30 @@ export function BudgetFormModal({ isOpen, onClose, onSave, editBudget }: Props) 
   const handleSaveAndExport = () => {
     const summary = calculateBudgetSummary(data);
     const budget: Budget = {
-      // En edición conserva el id y fecha original; en nuevo genera uno nuevo
-      id:       editBudget?.id   ?? Math.random().toString(36).slice(2),
-      date:     editBudget?.date ?? new Date().toISOString().split('T')[0],
+      id:       isEditing ? (editBudget?.id ?? '') : '',
+      date:     isEditing
+                  ? (editBudget?.date ?? new Date().toISOString().split('T')[0])
+                  : new Date().toISOString().split('T')[0],
       name:     data.name,
       totalUSD: summary.totalCostUSD,
       totalBS:  summary.totalCostBS,
-      status:   editBudget?.status ?? 'listo',
+      status:   isEditing ? (editBudget?.status ?? 'listo') : 'en-desarrollo',
       data,
     };
     onSave(budget);
-    handleClose();
+    onClose();
   };
 
-  const handleClose = () => {
-    onClose();
-    setTimeout(() => {
+  // Resetear al cerrar — directamente en onOpenChange, sin timer
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      onClose();
+      // Resetear inmediatamente: el Sheet anima su cierre,
+      // el estado se limpia antes de que sea visible de nuevo
       setStep(1);
       setData(INITIAL_FORM_DATA);
       setError(null);
-    }, 300);
+    }
   };
 
   const currentStepContent = () => {
@@ -167,114 +162,100 @@ export function BudgetFormModal({ isOpen, onClose, onSave, editBudget }: Props) 
     }
   };
 
+  const headerColor = isEditing ? '$orange9' : isCopyMode ? '$cyan9' : '$blue9';
+  const headerTitle = isEditing ? 'Editar Presupuesto'
+                    : isCopyMode ? 'Nueva Copia'
+                    : 'Nuevo Presupuesto';
+  const saveLabel   = isEditing ? 'Guardar Cambios'
+                    : isCopyMode ? 'Guardar Copia'
+                    : 'Finalizar';
+  const saveBg      = isEditing ? '$orange9' : '$green9';
+
   return (
     <Sheet
       open={isOpen}
-      onOpenChange={open => { if (!open) handleClose(); }}
+      onOpenChange={handleOpenChange}
       snapPoints={[100]}
       dismissOnSnapToBottom={false}
       modal
       zIndex={200000}
     >
-      <Sheet.Overlay
-        backgroundColor="rgba(0,0,0,0.5)"
-        enterStyle={{ opacity: 0 }}
-        exitStyle={{ opacity: 0 }}
-      />
-      <Sheet.Frame backgroundColor="$background" flex={1}>
+      <Sheet.Overlay backgroundColor="rgba(0,0,0,0.5)"
+        enterStyle={{ opacity: 0 }} exitStyle={{ opacity: 0 }} />
 
+      <Sheet.Frame backgroundColor="$background" flex={1}>
         {/* Header */}
-        <YStack
-          paddingHorizontal="$5" paddingTop="$10" paddingBottom="$3"
-          gap="$3" borderBottomWidth={1} borderBottomColor="$borderColor"
-        >
+        <YStack paddingHorizontal="$5" paddingTop="$10" paddingBottom="$3"
+          gap="$3" borderBottomWidth={1} borderBottomColor="$borderColor">
           <XStack justifyContent="space-between" alignItems="flex-start">
             <YStack gap="$1">
               <XStack alignItems="center" gap="$2">
-                <YStack
-                  width={20} height={20} borderRadius="$2"
-                  backgroundColor={isEditing ? '$orange9' : '$blue9'}
-                  alignItems="center" justifyContent="center"
-                >
-                  <SizableText size="$1" fontWeight="700" color="white">FC</SizableText>
+                <YStack width={20} height={20} borderRadius="$2"
+                  backgroundColor={headerColor}
+                  alignItems="center" justifyContent="center">
+                  {isCopyMode
+                    ? <Copy size={11} color="white" />
+                    : <SizableText size="$1" fontWeight="700" color="white">FC</SizableText>
+                  }
                 </YStack>
-                <SizableText size="$5" fontWeight="700" color="$color">
-                  {isEditing ? 'Editar Presupuesto' : 'Nuevo Presupuesto'}
-                </SizableText>
+                <SizableText size="$5" fontWeight="700" color="$color">{headerTitle}</SizableText>
               </XStack>
               <SizableText size="$2" color="$colorSubtitle">
                 Paso {step} de {STEPS.length} — {STEPS[step - 1].title}
               </SizableText>
             </YStack>
-            <Button size="$3" circular chromeless onPress={handleClose} icon={<X size={18} />} />
+            <Button size="$3" circular chromeless onPress={() => handleOpenChange(false)}
+              icon={<X size={18} />} />
           </XStack>
           <StepHeader step={step} onGoToStep={goToStep} />
         </YStack>
 
         {/* Error */}
         {error && (
-          <YStack
-            marginHorizontal="$5" marginTop="$3"
+          <YStack marginHorizontal="$5" marginTop="$3"
             paddingHorizontal="$4" paddingVertical="$3"
-            backgroundColor="$red3" borderColor="$red6" borderWidth={1} borderRadius="$4"
-          >
+            backgroundColor="$red3" borderColor="$red6" borderWidth={1} borderRadius="$4">
             <SizableText size="$3" color="$red9">{error}</SizableText>
           </YStack>
         )}
 
         {/* Contenido */}
-        <Sheet.ScrollView
-          flex={1}
+        <Sheet.ScrollView flex={1}
           contentContainerStyle={{ padding: 20, paddingBottom: 16 }}
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
+          showsVerticalScrollIndicator={false}>
           {currentStepContent()}
         </Sheet.ScrollView>
 
         {/* Footer */}
-        <XStack
-          paddingHorizontal="$5" paddingVertical="$4" paddingBottom="$6"
+        <XStack paddingHorizontal="$5" paddingVertical="$4" paddingBottom="$6"
           borderTopWidth={1} borderTopColor="$borderColor"
           justifyContent="space-between" alignItems="center"
-          backgroundColor="$background"
-        >
-          <Button
-            onPress={goPrev}
-            disabled={step === 1}
-            chromeless
+          backgroundColor="$background">
+          <Button onPress={goPrev} disabled={step === 1} chromeless
             icon={<ChevronLeft size={16} color={step === 1 ? '$colorPlaceholder' : '$colorSubtitle'} />}
-            opacity={step === 1 ? 0.4 : 1}
-          >
+            opacity={step === 1 ? 0.4 : 1}>
             <SizableText color={step === 1 ? '$colorPlaceholder' : '$colorSubtitle'}>Anterior</SizableText>
           </Button>
 
           <StepDots step={step} />
 
           {step < 5 ? (
-            <Button
-              onPress={goNext}
-              backgroundColor="$blue9" borderRadius="$4" paddingHorizontal="$5"
+            <Button onPress={goNext} backgroundColor="$blue9" borderRadius="$4"
+              paddingHorizontal="$5"
               iconAfter={<ChevronRight size={16} color="white" />}
-              pressStyle={{ opacity: 0.85, scale: 0.97 }}
-            >
+              pressStyle={{ opacity: 0.85, scale: 0.97 }}>
               <SizableText color="white" fontWeight="600">Siguiente</SizableText>
             </Button>
           ) : (
-            <Button
-              onPress={handleSaveAndExport}
-              backgroundColor={isEditing ? '$orange9' : '$green9'}
+            <Button onPress={handleSaveAndExport} backgroundColor={saveBg}
               borderRadius="$4" paddingHorizontal="$5"
               icon={<Check size={16} color="white" />}
-              pressStyle={{ opacity: 0.85, scale: 0.97 }}
-            >
-              <SizableText color="white" fontWeight="600">
-                {isEditing ? 'Guardar Cambios' : 'Finalizar'}
-              </SizableText>
+              pressStyle={{ opacity: 0.85, scale: 0.97 }}>
+              <SizableText color="white" fontWeight="600">{saveLabel}</SizableText>
             </Button>
           )}
         </XStack>
-
       </Sheet.Frame>
     </Sheet>
   );

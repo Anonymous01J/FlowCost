@@ -17,6 +17,23 @@ export interface CompanyProfile {
   logoBase64: string | null; // base64 data URI
 }
 
+
+/** Valida formato de RIF venezolano: J-12345678-9, V-12345678, etc. */
+export function validateRIF(rif: string): boolean {
+  if (!rif) return true; // campo opcional
+  return /^[VJGEP]-?\d{7,8}-?\d$/.test(rif.trim().toUpperCase());
+}
+
+/** Formatea RIF mientras se escribe: J12345678 → J-12345678-9 */
+export function formatRIF(raw: string): string {
+  const clean = raw.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+  if (clean.length <= 1) return clean;
+  const letter = clean[0];
+  const digits = clean.slice(1).replace(/\D/g, '');
+  if (digits.length <= 8) return `${letter}-${digits}`;
+  return `${letter}-${digits.slice(0, 8)}-${digits[8] ?? ''}`;
+}
+
 const DEFAULT_PROFILE: CompanyProfile = {
   name: '',
   rif: '',

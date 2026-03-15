@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   ScrollView, Platform, Image, Pressable, Alert,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   YStack, XStack, SizableText, Button, Card, Separator,
 } from 'tamagui';
@@ -95,6 +96,7 @@ async function pickImage(): Promise<string | null> {
 // ── Pantalla principal ────────────────────────────────────────────────────────
 export default function CompanyScreen() {
   const { profile, loading, saveProfile } = useCompany();
+  const insets = useSafeAreaInsets();
   const { theme } = useThemeContext();
   const c = COLORS[theme];
 
@@ -149,7 +151,7 @@ export default function CompanyScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <XStack alignItems="center" gap="$3" marginTop="$8" marginBottom="$6">
+        <XStack alignItems="center" gap="$3" marginTop={insets.top + 16} marginBottom="$6">
           <YStack width={40} height={40} borderRadius="$3" backgroundColor="$blue9"
             alignItems="center" justifyContent="center">
             <Building2 size={20} color="white" />

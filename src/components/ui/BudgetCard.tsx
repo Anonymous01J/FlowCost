@@ -66,9 +66,19 @@ export function BudgetCard({ budget, onDelete, onToggleStatus, onEdit, onCopy }:
         {/* Header */}
         <XStack justifyContent="space-between" alignItems="flex-start" gap="$2" marginBottom="$3">
           <YStack flex={1} gap="$1">
-            <SizableText size="$4" fontWeight="700" color="$color" numberOfLines={1}>
-              {budget.name}
-            </SizableText>
+            <XStack alignItems="center" gap="$2">
+              {budget.number && (
+                <YStack backgroundColor="$backgroundStrong" borderRadius="$2"
+                  paddingHorizontal="$2" paddingVertical="$0.5">
+                  <SizableText size="$1" color="$colorSubtitle" fontWeight="600">
+                    #{budget.number}
+                  </SizableText>
+                </YStack>
+              )}
+              <SizableText size="$4" fontWeight="700" color="$color" numberOfLines={1} flex={1}>
+                {budget.name}
+              </SizableText>
+            </XStack>
             <SizableText size="$2" color="$colorSubtitle">{formattedDate}</SizableText>
           </YStack>
 
@@ -125,7 +135,7 @@ export function BudgetCard({ budget, onDelete, onToggleStatus, onEdit, onCopy }:
       <Sheet
         open={menuOpen}
         onOpenChange={setMenuOpen}
-        snapPoints={[58]}
+        snapPoints={[60]}
         dismissOnSnapToBottom
         modal
         zIndex={300000}

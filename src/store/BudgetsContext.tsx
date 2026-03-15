@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Budget } from '../features/budget-form/types';
 
@@ -35,7 +35,6 @@ interface BudgetsContextValue {
   updateBudget:       (budget: Budget) => Promise<void>;
   updateBudgetStatus: (id: string, status: Budget['status']) => Promise<void>;
   deleteBudget:       (id: string) => Promise<void>;
-  /** Devuelve un nombre único: si ya existe agrega " (copia)", " (copia 2)", etc. */
   uniqueName:         (base: string) => string;
 }
 
@@ -59,20 +58,23 @@ export function BudgetsProvider({ children }: { children: React.ReactNode }) {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Ref siempre actualizada — evita stale closures en callbacks
+  const budgetsRef = useRef(budgets);
+  useEffect(() => { budgetsRef.current = budgets; }, [budgets]);
+
   useEffect(() => {
     loadFromStorage().then(data => { setBudgets(data); setLoading(false); });
   }, []);
 
   const persist = useCallback(async (next: Budget[]) => {
     setBudgets(next);
+    budgetsRef.current = next;
     await saveToStorage(next);
   }, []);
 
-  // Genera un nombre único en base a los existentes
   const uniqueName = useCallback((base: string): string => {
-    const names = new Set(budgets.map(b => b.name));
+    const names = new Set(budgetsRef.current.map(b => b.name));
     if (!names.has(base)) return base;
-    // Quita sufijo previo tipo " (copia N)" para no acumularlos
     const stripped = base.replace(/\s\(copia(\s\d+)?\)$/, '');
     let candidate = `${stripped} (copia)`;
     let n = 2;
@@ -81,23 +83,25 @@ export function BudgetsProvider({ children }: { children: React.ReactNode }) {
       n++;
     }
     return candidate;
-  }, [budgets]);
+  }, []);
 
   const addBudget = useCallback(async (budget: Budget) => {
-    await persist([budget, ...budgets]);
-  }, [budgets, persist]);
+    const maxNum = budgetsRef.current.reduce((m, b) => Math.max(m, b.number ?? 0), 0);
+    const withNumber: Budget = { ...budget, number: maxNum + 1 };
+    await persist([withNumber, ...budgetsRef.current]);
+  }, [persist]);
 
   const updateBudget = useCallback(async (budget: Budget) => {
-    await persist(budgets.map(b => b.id === budget.id ? budget : b));
-  }, [budgets, persist]);
+    await persist(budgetsRef.current.map(b => b.id === budget.id ? budget : b));
+  }, [persist]);
 
   const updateBudgetStatus = useCallback(async (id: string, status: Budget['status']) => {
-    await persist(budgets.map(b => b.id === id ? { ...b, status } : b));
-  }, [budgets, persist]);
+    await persist(budgetsRef.current.map(b => b.id === id ? { ...b, status } : b));
+  }, [persist]);
 
   const deleteBudget = useCallback(async (id: string) => {
-    await persist(budgets.filter(b => b.id !== id));
-  }, [budgets, persist]);
+    await persist(budgetsRef.current.filter(b => b.id !== id));
+  }, [persist]);
 
   return (
     <BudgetsContext.Provider value={{
