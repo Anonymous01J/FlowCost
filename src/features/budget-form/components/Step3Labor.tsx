@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { YStack, XStack, SizableText, Button, Card, Separator } from 'tamagui';
 import { Plus, Trash2 } from '@tamagui/lucide-icons';
 import type { BudgetFormData, LaborRow } from '../types';
@@ -37,8 +37,17 @@ interface RowCardProps {
 
 function RowCard({ row, onUpdate, onRemove }: RowCardProps) {
   const [payTypeSheetOpen, setPayTypeSheetOpen] = useState(false);
-  const [amountDisplay, setAmountDisplay] = useState(row.amountUSD ? formatVE(row.amountUSD) : '');
-  const [timeDisplay, setTimeDisplay] = useState(String(row.timeQuantity));
+  const [amountDisplay, setAmountDisplay] = useState(row.amountUSD > 0 ? formatVE(row.amountUSD) : '');
+  const [timeDisplay,   setTimeDisplay]   = useState(row.timeQuantity > 0 ? String(row.timeQuantity) : '');
+
+  // Sync con datos externos (modo edición)
+  useEffect(() => {
+    setAmountDisplay(row.amountUSD > 0 ? formatVE(row.amountUSD) : '');
+  }, [row.amountUSD]);
+
+  useEffect(() => {
+    setTimeDisplay(row.timeQuantity > 0 ? String(row.timeQuantity) : '');
+  }, [row.timeQuantity]);
 
   const selectedPayTypeLabel = PAY_TYPE_OPTIONS.find((o) => o.value === row.payType)?.label ?? row.payType;
 
@@ -115,7 +124,7 @@ function RowCard({ row, onUpdate, onRemove }: RowCardProps) {
 }
 
 export function Step3Labor({ data, onChange }: Props) {
-  const rows = data.laborItems;
+  const rows  = data.laborItems;
   const calcs = rows.map((r) => calcLabor(r, data.exchangeRate));
   const totalUSD = calcs.reduce((s, r) => s + r.subtotalUSD, 0);
   const totalBS  = calcs.reduce((s, r) => s + r.subtotalBS,  0);

@@ -110,7 +110,7 @@ export function BudgetCard({ budget, onDelete, onToggleStatus, onEdit }: Props) 
       <Sheet
         open={menuOpen}
         onOpenChange={setMenuOpen}
-        snapPoints={[38]}
+        snapPoints={[50]}
         dismissOnSnapToBottom
         modal
         zIndex={300000}

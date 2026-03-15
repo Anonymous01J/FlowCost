@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ScrollView } from 'react-native';
 import { YStack, XStack, SizableText, Button, Card, Separator } from 'tamagui';
 import { Plus, Trash2 } from '@tamagui/lucide-icons';
@@ -37,7 +37,12 @@ interface RowCardProps {
 }
 
 function RowCard({ row, onUpdate, onRemove }: RowCardProps) {
-  const [costDisplay, setCostDisplay] = React.useState(row.costUSD ? formatVE(row.costUSD) : '');
+  const [costDisplay, setCostDisplay] = useState(row.costUSD > 0 ? formatVE(row.costUSD) : '');
+
+  // Sync con datos externos (modo edición)
+  useEffect(() => {
+    setCostDisplay(row.costUSD > 0 ? formatVE(row.costUSD) : '');
+  }, [row.costUSD]);
 
   return (
     <Card borderColor="$borderColor" borderWidth={1} borderRadius="$4" padding="$3"
@@ -89,7 +94,7 @@ function RowCard({ row, onUpdate, onRemove }: RowCardProps) {
 }
 
 export function Step4IndirectCosts({ data, onChange }: Props) {
-  const rows = data.indirectCosts;
+  const rows  = data.indirectCosts;
   const calcs = rows.map((r) => calcIndirectCost(r, data.exchangeRate));
   const totalUSD = calcs.reduce((s, r) => s + r.costUSD, 0);
   const totalBS  = calcs.reduce((s, r) => s + r.costBS,  0);

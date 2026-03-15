@@ -1,34 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { YStack, XStack, SizableText, Card } from 'tamagui';
 import { Info } from '@tamagui/lucide-icons';
 import type { BudgetFormData } from '../types';
 import { SALE_UNIT_OPTIONS } from '../types';
 import { OptionSheet, SelectTrigger } from './OptionSheet';
-import InputCustom from '../../../components/ui/InputCustom';
+import InputCustom, { formatVE, parseVE } from '../../../components/ui/InputCustom';
 
 interface Props {
   data: BudgetFormData;
   onChange: (updates: Partial<BudgetFormData>) => void;
 }
 
-// Estado local para los strings formateados de los campos precio
-interface PriceDisplays {
-  exchangeRate: string;
-  profitMarginPct: string;
-  lotQuantity: string;
-  vatPct: string;
-}
-
 export function Step1GeneralData({ data, onChange }: Props) {
   const [saleUnitSheetOpen, setSaleUnitSheetOpen] = useState(false);
 
-  // Strings formateados para mostrar en pantalla
-  const [displays, setDisplays] = React.useState<PriceDisplays>({
-    exchangeRate: data.exchangeRate ? String(data.exchangeRate) : '',
-    profitMarginPct: data.profitMarginPct ? String(data.profitMarginPct) : '',
-    lotQuantity: data.lotQuantity ? String(data.lotQuantity) : '',
-    vatPct: data.vatPct ? String(data.vatPct) : '',
+  // Convierte un número a string formateado venezolano para mostrarlo en el input
+  const toDisplay = (n: number) => n > 0 ? formatVE(n) : '';
+
+  // Strings que se muestran en pantalla — se sincronizan cuando cambia `data`
+  // (importante para el modo edición, donde data llega precargado desde fuera)
+  const [displays, setDisplays] = useState({
+    exchangeRate:   toDisplay(data.exchangeRate),
+    profitMarginPct: toDisplay(data.profitMarginPct),
+    lotQuantity:    data.lotQuantity > 0 ? String(data.lotQuantity) : '',
+    vatPct:         toDisplay(data.vatPct),
   });
+
+  // Cuando data cambia desde el exterior (p.ej. al abrir en modo edición),
+  // re-sincroniza los displays para que los inputs muestren los valores correctos
+  useEffect(() => {
+    setDisplays({
+      exchangeRate:    toDisplay(data.exchangeRate),
+      profitMarginPct: toDisplay(data.profitMarginPct),
+      lotQuantity:     data.lotQuantity > 0 ? String(data.lotQuantity) : '',
+      vatPct:          toDisplay(data.vatPct),
+    });
+  }, [
+    // Solo re-sync si los valores reales del modelo cambian desde fuera.
+    // Usar los valores numéricos, no el objeto completo, para evitar loops.
+    data.exchangeRate,
+    data.profitMarginPct,
+    data.lotQuantity,
+    data.vatPct,
+  ]);
 
   const selectedSaleUnitLabel =
     SALE_UNIT_OPTIONS.find((o) => o.value === data.saleUnit)?.label ?? data.saleUnit;
@@ -39,7 +53,6 @@ export function Step1GeneralData({ data, onChange }: Props) {
         Ingresa la información base del presupuesto. Estos datos se usarán en todos los cálculos.
       </SizableText>
 
-      {/* Nombre */}
       <InputCustom
         label="Nombre del Presupuesto *"
         placeholder="Ej: Producción Lote A – Marzo 2026"
@@ -49,12 +62,11 @@ export function Step1GeneralData({ data, onChange }: Props) {
         autoCapitalize="sentences"
       />
 
-      {/* Grid 2 columnas */}
       <XStack gap="$3" flexWrap="wrap">
         <YStack flex={1} minWidth={140}>
           <InputCustom
             label="Tasa de Cambio (Bs./$)"
-            placeholder="36,50"
+            placeholder="0,00"
             variant="price"
             prefix="Bs."
             value={displays.exchangeRate}
@@ -66,7 +78,7 @@ export function Step1GeneralData({ data, onChange }: Props) {
         <YStack flex={1} minWidth={140}>
           <InputCustom
             label="Utilidad / Margen"
-            placeholder="30,00"
+            placeholder="0,00"
             variant="price"
             suffix="%"
             value={displays.profitMarginPct}
@@ -89,7 +101,7 @@ export function Step1GeneralData({ data, onChange }: Props) {
         <YStack flex={1} minWidth={140}>
           <InputCustom
             label="IVA"
-            placeholder="16,00"
+            placeholder="0,00"
             variant="price"
             suffix="%"
             value={displays.vatPct}
@@ -99,7 +111,6 @@ export function Step1GeneralData({ data, onChange }: Props) {
         </YStack>
       </XStack>
 
-      {/* Unidad de Venta */}
       <XStack gap="$3" flexWrap="wrap">
         <YStack flex={1} minWidth={160}>
           <SizableText size="$2" color="$colorSubtitle" fontWeight="500" marginBottom="$1">
@@ -124,7 +135,6 @@ export function Step1GeneralData({ data, onChange }: Props) {
         )}
       </XStack>
 
-      {/* Info card */}
       <Card backgroundColor="$blue3" borderColor="$blue6" borderWidth={1} borderRadius="$4" padding="$4">
         <XStack gap="$3" alignItems="flex-start">
           <Info size={16} color="$blue9" marginTop={2} />

@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { YStack, XStack, SizableText, Button, Card, Separator } from 'tamagui';
 import { Plus, Trash2 } from '@tamagui/lucide-icons';
 import type { BudgetFormData, RawMaterialRow } from '../types';
 import { UNIT_OPTIONS } from '../types';
-import { calcRawMaterial, fmt } from '../calculations';
+import { calcRawMaterial } from '../calculations';
 import { OptionSheet, SelectTrigger } from './OptionSheet';
 import InputCustom, { formatVE } from '../../../components/ui/InputCustom';
 
@@ -34,8 +34,17 @@ interface RowCardProps {
 
 function RowCard({ row, onUpdate, onRemove }: RowCardProps) {
   const [unitSheetOpen, setUnitSheetOpen] = useState(false);
-  const [costDisplay, setCostDisplay] = useState(row.costUSD ? formatVE(row.costUSD) : '');
-  const [qtyDisplay, setQtyDisplay] = useState(String(row.quantity));
+  const [costDisplay, setCostDisplay] = useState(row.costUSD > 0 ? formatVE(row.costUSD) : '');
+  const [qtyDisplay,  setQtyDisplay]  = useState(row.quantity > 0 ? String(row.quantity) : '');
+
+  // Sync cuando llegan datos desde el exterior (modo edición)
+  useEffect(() => {
+    setCostDisplay(row.costUSD > 0 ? formatVE(row.costUSD) : '');
+  }, [row.costUSD]);
+
+  useEffect(() => {
+    setQtyDisplay(row.quantity > 0 ? String(row.quantity) : '');
+  }, [row.quantity]);
 
   return (
     <Card borderColor="$borderColor" borderWidth={1} borderRadius="$4" padding="$3"
@@ -119,7 +128,7 @@ function RowCard({ row, onUpdate, onRemove }: RowCardProps) {
 }
 
 export function Step2RawMaterials({ data, onChange }: Props) {
-  const rows = data.rawMaterials;
+  const rows  = data.rawMaterials;
   const calcs = rows.map((r) => calcRawMaterial(r, data.exchangeRate));
   const totalUSD = calcs.reduce((s, r) => s + r.subtotalUSD, 0);
   const totalBS  = calcs.reduce((s, r) => s + r.subtotalBS,  0);
