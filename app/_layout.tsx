@@ -1,11 +1,13 @@
 import { Stack } from 'expo-router';
-import { TamaguiProvider } from 'tamagui';
+import { TamaguiProvider, Theme } from 'tamagui';
 import { useFonts } from 'expo-font';
 import { useEffect } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 import { View } from 'react-native';
 import config from '../tamagui.config';
-import { ThemeProvider } from '../src/core/theme/ThemeProvider';
+
+// Un solo ThemeProvider — el de state/themeContext, sin intermediarios
+import { ThemeProvider, useThemeContext } from '../src/state/themeContext';
 import { BudgetsProvider } from '../src/store/BudgetsContext';
 import { CompanyProvider } from '../src/store/CompanyContext';
 import { OnboardingProvider, useOnboarding } from '../src/store/OnboardingContext';
@@ -13,13 +15,24 @@ import FlowCostOnboarding from '../src/features/onboarding/FlowCostOnboarding';
 
 SplashScreen.preventAutoHideAsync();
 
-// Envuelve el Stack con la lógica de onboarding
+// Aplica el tema de Tamagui reactivamente — vive DENTRO de ThemeProvider
+// para que useThemeContext() siempre encuentre el contexto
+function TamaguiThemeSync({ children }: { children: React.ReactNode }) {
+  const { theme } = useThemeContext();
+  return (
+    <Theme name={theme}>
+      <View style={{ flex: 1 }}>
+        {children}
+      </View>
+    </Theme>
+  );
+}
+
 function AppContent() {
   const { hasSeenOnboarding, loading } = useOnboarding();
 
   if (loading) return null;
 
-  // Primera vez → muestra onboarding a pantalla completa
   if (!hasSeenOnboarding) {
     return (
       <View style={{ flex: 1 }}>
@@ -53,13 +66,15 @@ export default function RootLayout() {
   return (
     <TamaguiProvider config={config} defaultTheme="light">
       <ThemeProvider>
-        <OnboardingProvider>
-          <CompanyProvider>
-            <BudgetsProvider>
-              <AppContent />
-            </BudgetsProvider>
-          </CompanyProvider>
-        </OnboardingProvider>
+        <TamaguiThemeSync>
+          <OnboardingProvider>
+            <CompanyProvider>
+              <BudgetsProvider>
+                <AppContent />
+              </BudgetsProvider>
+            </CompanyProvider>
+          </OnboardingProvider>
+        </TamaguiThemeSync>
       </ThemeProvider>
     </TamaguiProvider>
   );

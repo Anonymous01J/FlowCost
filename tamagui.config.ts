@@ -1,29 +1,30 @@
 import { config } from '@tamagui/config/v3'
-import { createAnimations } from '@tamagui/animations-moti'
+import { createAnimations } from '@tamagui/animations-react-native'
 import { createTamagui, createFont } from 'tamagui'
 
+// animations-react-native no requiere Worklets ni Moti
 const animations = createAnimations({
-  bouncy: { type: 'spring', damping: 10, stiffness: 100 },
-  lazy:   { type: 'timing', duration: 300 },
-  medium: { type: 'timing', duration: 200 },
+  bouncy: {
+    type: 'spring',
+    damping: 10,
+    stiffness: 100,
+  },
+  lazy: {
+    type: 'timing',
+    duration: 300,
+  },
+  medium: {
+    type: 'timing',
+    duration: 200,
+  },
 })
 
-// Escala subida ~1-2pt respecto al default de Tamagui
 const interFont = createFont({
   family: 'Inter-Regular',
   size: {
-    1: 13,   // era 11 — badges, labels uppercase
-    2: 14,   // era 12 — subtítulos secundarios
-    3: 15,   // era 13 — texto de cuerpo normal
-    4: 16,   // era 14 — texto principal, inputs
-    5: 17,   // era 15
-    6: 18,   // era 16 — títulos de sección
-    7: 20,   // era 18
-    8: 22,   // era 20
-    9: 26,   // era 24 — títulos grandes
-    10: 30,  // era 28
-    11: 34,  // era 32
-    12: 42,  // era 40
+    1: 13, 2: 14, 3: 15, 4: 16,
+    5: 17, 6: 18, 7: 20, 8: 22,
+    9: 26, 10: 30, 11: 34, 12: 42,
     true: 16,
   },
   lineHeight: {
@@ -59,9 +60,9 @@ const tamaguiConfig = createTamagui({
   ...config,
   animations,
   fonts: {
-    body: interFont,
-    heading: interFont,
-    mono: interFont,
+    body:       interFont,
+    heading:    interFont,
+    mono:       interFont,
     silkscreen: interFont,
   },
 })

@@ -13,6 +13,7 @@ import {
 } from '../calculations';
 import { formatVE } from '../../../components/ui/InputCustom';
 import { exportBudgetPDF } from '../pdfExport';
+import { useCompany } from '../../../store/CompanyContext';
 
 interface Props {
   data: BudgetFormData;
@@ -56,6 +57,7 @@ function MetricCard({ icon, label, value, sub, backgroundColor, borderColor }: {
 export function Step5Summary({ data, onSaveAndExport }: Props) {
   const s = calculateBudgetSummary(data);
   const [exporting, setExporting] = useState(false);
+  const { profile } = useCompany();
 
   // Guarda el presupuesto y luego exporta PDF por separado
   // para evitar el error "An earlier share has not yet completed"
@@ -76,7 +78,7 @@ export function Step5Summary({ data, onSaveAndExport }: Props) {
         status:   'listo',
         data,
       };
-      await exportBudgetPDF(tempBudget);
+      await exportBudgetPDF(tempBudget, profile);
     } catch (e) {
       Alert.alert('Error', 'No se pudo exportar el PDF.');
     } finally {

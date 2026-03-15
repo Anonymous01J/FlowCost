@@ -44,7 +44,7 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="company"
+        name="Company"
         options={{
           title: 'Mi Empresa',
           tabBarIcon: ({ color, size }) => (
