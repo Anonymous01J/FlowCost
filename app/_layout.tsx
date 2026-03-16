@@ -1,4 +1,4 @@
-import { Stack } from 'expo-router';
+import { Head, Stack } from 'expo-router';
 import { TamaguiProvider, Theme } from 'tamagui';
 import { useFonts } from 'expo-font';
 import { useEffect, useState } from 'react';
@@ -68,18 +68,25 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <TamaguiProvider config={config} defaultTheme="light">
-      <ThemeProvider>
-        <TamaguiThemeSync>
-          <OnboardingProvider>
-            <CompanyProvider>
-              <BudgetsProvider>
-                <AppContent />
-              </BudgetsProvider>
-            </CompanyProvider>
-          </OnboardingProvider>
-        </TamaguiThemeSync>
-      </ThemeProvider>
-    </TamaguiProvider>
+    <>
+      <Head>
+        <title>FlowCost - Calcula tus Costos y Genera Cotizaciones Fácilmente</title>
+        <meta name="description" content="Con FlowCost, puedes calcular los costos de tus productos, determinar precios de venta y generar cotizaciones en PDF para tus clientes. Ideal para emprendedores y pequeños negocios." />
+        <meta name="keywords" content="FlowCost, presupuesto, cotización, calcular costos, precio de venta, negocios, emprendedores, materia prima, mano de obra, costos indirectos, ganancia, PDF" />
+      </Head>
+      <TamaguiProvider config={config} defaultTheme="light">
+        <ThemeProvider>
+          <TamaguiThemeSync>
+            <OnboardingProvider>
+              <CompanyProvider>
+                <BudgetsProvider>
+                  <AppContent />
+                </BudgetsProvider>
+              </CompanyProvider>
+            </OnboardingProvider>
+          </TamaguiThemeSync>
+        </ThemeProvider>
+      </TamaguiProvider>
+    </>
   );
 }
