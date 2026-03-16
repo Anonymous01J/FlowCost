@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { Alert } from 'react-native';
 import { YStack, XStack, SizableText, Card, Button, Sheet, Separator, Spinner } from 'tamagui';
 import {
-  CheckCircle, Clock, MoreHorizontal, Trash2, RefreshCw, Pencil, FileDown, Copy,
+  CheckCircle, Clock, MoreHorizontal, Trash2, RefreshCw, Pencil, FileDown, Copy, Send,
 } from '@tamagui/lucide-icons';
 import type { Budget } from '../../features/budget-form/types';
 import { formatVE } from './InputCustom';
-import { exportBudgetPDF } from '../../features/budget-form/pdfExport';
+import { exportBudgetPDF, exportClientQuotePDF } from '../../features/budget-form/pdfExport';
 import { useCompany } from '../../store/CompanyContext';
 
 interface Props {
@@ -14,7 +14,6 @@ interface Props {
   onDelete?:       (id: string) => void;
   onToggleStatus?: (id: string) => void;
   onEdit?:         (budget: Budget) => void;
-  /** Abre el modal de creación con datos precargados pero nombre único */
   onCopy?:         (budget: Budget) => void;
 }
 
@@ -29,13 +28,25 @@ export function BudgetCard({ budget, onDelete, onToggleStatus, onEdit, onCopy }:
 
   const isListo = budget.status === 'listo';
 
-  const handleExport = async () => {
+  const handleExportInternal = async () => {
     setMenuOpen(false);
     setExporting(true);
     try {
       await exportBudgetPDF(budget, profile);
     } catch (e: any) {
       Alert.alert('Error al exportar', e?.message ?? 'Ocurrió un error inesperado.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleExportClientQuote = async () => {
+    setMenuOpen(false);
+    setExporting(true);
+    try {
+      await exportClientQuotePDF(budget, profile);
+    } catch (e: any) {
+      Alert.alert('Error al exportar cotización', e?.message ?? 'Ocurrió un error inesperado.');
     } finally {
       setExporting(false);
     }
@@ -135,7 +146,7 @@ export function BudgetCard({ budget, onDelete, onToggleStatus, onEdit, onCopy }:
       <Sheet
         open={menuOpen}
         onOpenChange={setMenuOpen}
-        snapPoints={[60]}
+        snapPoints={[75]}
         dismissOnSnapToBottom
         modal
         zIndex={300000}
@@ -157,7 +168,12 @@ export function BudgetCard({ budget, onDelete, onToggleStatus, onEdit, onCopy }:
             () => { setMenuOpen(false); onCopy?.(budget); })}
           <Separator />
 
-          {menuItem('Exportar PDF', '#7c3aed', FileDown, handleExport)}
+          {/* PDF interno — con todos los costos, para el productor */}
+          {menuItem('PDF interno (costos)', '#7c3aed', FileDown, handleExportInternal)}
+          <Separator />
+
+          {/* Cotización para el cliente — sin costos internos ni margen */}
+          {menuItem('Cotización para cliente', '#16a34a', Send, handleExportClientQuote)}
           <Separator />
 
           {menuItem(

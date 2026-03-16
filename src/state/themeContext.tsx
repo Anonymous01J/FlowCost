@@ -13,9 +13,7 @@ interface ThemeContextType {
   toggleTheme: () => void;
 }
 
-// Valor por defecto — usado cuando el contexto no está montado todavía
-// (ej: portales de Sheet/Modal que se renderizan fuera del árbol)
-// En lugar de lanzar un error, devuelve 'light' silenciosamente
+// Fallback seguro para portales de Sheet/Modal que renderizan fuera del árbol
 const DEFAULT_CONTEXT: ThemeContextType = {
   theme: 'light',
   mode: 'system',
@@ -60,6 +58,5 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-// Ya no lanza error — devuelve el valor por defecto si no hay provider
-// Esto permite que InputCustom funcione dentro de portales de Sheet/Modal
+// Sin throw — devuelve DEFAULT_CONTEXT si no hay provider (portales de Sheet)
 export const useThemeContext = () => useContext(ThemeContext);

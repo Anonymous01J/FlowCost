@@ -4,11 +4,10 @@ import { formatVE } from '../../components/ui/InputCustom';
 import type { Budget } from './types';
 import type { CompanyProfile } from '../../store/CompanyContext';
 
-// ─── Cabecera corporativa HTML ────────────────────────────────────────────────
+// ─── Cabecera corporativa HTML (compartida) ───────────────────────────────────
 
 function buildCompanyHeader(company: CompanyProfile | null): string {
   if (!company || !company.name) {
-    // Sin perfil de empresa: cabecera simple con logo de la app
     return `
     <div class="header">
       <div class="logo-wrap">
@@ -37,9 +36,7 @@ function buildCompanyHeader(company: CompanyProfile | null): string {
 
   return `
   <div class="company-header">
-    <div class="company-left">
-      ${logoHtml}
-    </div>
+    <div class="company-left">${logoHtml}</div>
     <div class="company-right">
       <div class="company-name">${company.name}</div>
       ${company.rif     ? `<div class="company-detail">RIF: ${company.rif}</div>` : ''}
@@ -51,9 +48,60 @@ function buildCompanyHeader(company: CompanyProfile | null): string {
   <hr class="company-divider" />`;
 }
 
-// ─── HTML completo ────────────────────────────────────────────────────────────
+// ─── CSS base compartido ──────────────────────────────────────────────────────
 
-function buildHtml(budget: Budget, company: CompanyProfile | null): string {
+const BASE_CSS = `
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .no-print { display: none !important; }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Helvetica, Arial, sans-serif; font-size: 12px;
+         color: #1e293b; padding: 32px; max-width: 900px; margin: 0 auto; }
+
+  .print-btn { display: block; margin: 0 auto 24px auto; padding: 10px 28px;
+               background: #2563eb; color: white; border: none; border-radius: 8px;
+               font-size: 14px; font-weight: 700; cursor: pointer; }
+  .print-btn:hover { background: #1d4ed8; }
+
+  .company-header { display: flex; align-items: flex-start; gap: 20px; margin-bottom: 16px; }
+  .company-left  { flex-shrink: 0; }
+  .company-right { flex: 1; }
+  .company-name  { font-size: 18px; font-weight: 800; color: #1e293b; margin-bottom: 4px; }
+  .company-detail { font-size: 11px; color: #64748b; margin-top: 2px; }
+  .company-divider { border: none; border-top: 2px solid #e2e8f0; margin: 16px 0 20px 0; }
+
+  .logo-badge { display: inline-flex; width: 64px; height: 64px; background: #2563eb;
+                border-radius: 8px; align-items: center; justify-content: center;
+                color: white; font-weight: 800; font-size: 18px; flex-shrink: 0; }
+
+  .doc-header { display: flex; justify-content: space-between; align-items: flex-start;
+                background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;
+                padding: 16px; margin-bottom: 24px; }
+  .doc-title h1 { font-size: 15px; font-weight: 700; }
+  .doc-title p  { font-size: 11px; color: #64748b; margin-top: 3px; }
+  .doc-badge { color: white; font-size: 10px; font-weight: 700;
+               padding: 4px 12px; border-radius: 20px; text-transform: uppercase; }
+  .doc-badge.internal { background: #2563eb; }
+  .doc-badge.quote    { background: #16a34a; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th { background: #f1f5f9; padding: 6px 8px; text-align: left; font-size: 10px;
+       text-transform: uppercase; color: #64748b; border-bottom: 2px solid #e2e8f0; }
+  td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; }
+  .subtotal-row td { font-weight: 700; background: #f8fafc; border-top: 1px solid #e2e8f0; }
+  .total-row   td { font-weight: 700; background: #1e293b; color: white; }
+  .price-final td { background: #16a34a; color: white; font-weight: 700; }
+  .center { text-align: center; }
+  .right  { text-align: right; }
+
+  .footer { border-top: 1px solid #e2e8f0; padding-top: 10px; margin-top: 16px;
+            font-size: 10px; color: #94a3b8; display: flex; justify-content: space-between; }
+`;
+
+// ─── PDF INTERNO (para el productor) ─────────────────────────────────────────
+
+function buildInternalHtml(budget: Budget, company: CompanyProfile | null): string {
   const d = budget.data;
   const s = calculateBudgetSummary(d);
 
@@ -90,40 +138,7 @@ function buildHtml(budget: Budget, company: CompanyProfile | null): string {
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>${d.name || 'Presupuesto'} - FlowCost</title>
 <style>
-  @media print {
-    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .no-print { display: none !important; }
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Helvetica, Arial, sans-serif; font-size: 12px;
-         color: #1e293b; padding: 32px; max-width: 900px; margin: 0 auto; }
-
-  .print-btn { display: block; margin: 0 auto 24px auto; padding: 10px 28px;
-               background: #2563eb; color: white; border: none; border-radius: 8px;
-               font-size: 14px; font-weight: 700; cursor: pointer; }
-  .print-btn:hover { background: #1d4ed8; }
-
-  /* Cabecera corporativa */
-  .company-header { display: flex; align-items: flex-start; gap: 20px; margin-bottom: 16px; }
-  .company-left  { flex-shrink: 0; }
-  .company-right { flex: 1; }
-  .company-name  { font-size: 18px; font-weight: 800; color: #1e293b; margin-bottom: 4px; }
-  .company-detail { font-size: 11px; color: #64748b; margin-top: 2px; }
-  .company-divider { border: none; border-top: 2px solid #e2e8f0; margin: 16px 0 20px 0; }
-
-  /* Logo badge fallback */
-  .logo-badge { display: inline-flex; width: 64px; height: 64px; background: #2563eb;
-                border-radius: 8px; align-items: center; justify-content: center;
-                color: white; font-weight: 800; font-size: 18px; flex-shrink: 0; }
-
-  /* Cabecera del presupuesto */
-  .doc-header { display: flex; justify-content: space-between; align-items: flex-start;
-                background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;
-                padding: 16px; margin-bottom: 24px; }
-  .doc-title h1 { font-size: 15px; font-weight: 700; }
-  .doc-title p  { font-size: 11px; color: #64748b; margin-top: 3px; }
-  .doc-badge { background: #2563eb; color: white; font-size: 10px; font-weight: 700;
-               padding: 4px 12px; border-radius: 20px; text-transform: uppercase; }
+  ${BASE_CSS}
 
   .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
   .metric { border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; }
@@ -147,19 +162,6 @@ function buildHtml(budget: Budget, company: CompanyProfile | null): string {
   .section-title.blue   { color: #2563eb; background: #eff6ff; }
   .section-title.purple { color: #7c3aed; background: #faf5ff; }
   .section-title.orange { color: #ea580c; background: #fff7ed; }
-
-  table { width: 100%; border-collapse: collapse; font-size: 11px; }
-  th { background: #f1f5f9; padding: 6px 8px; text-align: left; font-size: 10px;
-       text-transform: uppercase; color: #64748b; border-bottom: 2px solid #e2e8f0; }
-  td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; }
-  .subtotal-row td { font-weight: 700; background: #f8fafc; border-top: 1px solid #e2e8f0; }
-  .total-row   td { font-weight: 700; background: #1e293b; color: white; }
-  .price-final td { background: #16a34a; color: white; font-weight: 700; }
-  .center { text-align: center; }
-  .right  { text-align: right; }
-
-  .footer { border-top: 1px solid #e2e8f0; padding-top: 10px; margin-top: 16px;
-            font-size: 10px; color: #94a3b8; display: flex; justify-content: space-between; }
 </style>
 </head>
 <body>
@@ -174,7 +176,7 @@ ${buildCompanyHeader(company)}
     <p>Generado el ${new Date(budget.date + 'T00:00:00').toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
     <p>Tasa de cambio: Bs. ${formatVE(s.exchangeRate)} / $</p>
   </div>
-  <div class="doc-badge">Presupuesto</div>
+  <div class="doc-badge internal">Presupuesto Interno</div>
 </div>
 
 <div class="metrics">
@@ -189,8 +191,8 @@ ${buildCompanyHeader(company)}
     <div class="metric-sub">Bs. ${formatVE(s.salePriceWithoutVatBS)}</div>
   </div>
   <div class="metric purple">
-    <div class="metric-label">Margen</div>
-    <div class="metric-value">${formatVE(s.profitMarginPct, 1)}%</div>
+    <div class="metric-label">Margen (${formatVE(d.profitMarginPct, 1)}%)</div>
+    <div class="metric-value">${formatVE(d.profitMarginPct, 1)}%</div>
     <div class="metric-sub">$ ${formatVE(s.profitAmountUSD)} por unidad</div>
   </div>
   <div class="metric orange">
@@ -316,14 +318,176 @@ ${buildCompanyHeader(company)}
 </html>`;
 }
 
-// ─── Export principal ─────────────────────────────────────────────────────────
+// ─── PDF COTIZACIÓN PARA EL CLIENTE ──────────────────────────────────────────
+// Sin costos internos, sin margen, sin desglose de insumos/MO/CIF.
+// Solo lo que el cliente necesita ver: qué se produce, precio y condiciones.
 
-export async function exportBudgetPDF(
-  budget: Budget,
-  company: CompanyProfile | null = null,
-): Promise<void> {
-  const html = buildHtml(budget, company);
+function buildClientQuoteHtml(budget: Budget, company: CompanyProfile | null): string {
+  const d = budget.data;
+  const s = calculateBudgetSummary(d);
+  const today = new Date().toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' });
+  const budgetDate = new Date(budget.date + 'T00:00:00').toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' });
 
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Cotización — ${d.name || 'Presupuesto'}</title>
+<style>
+  ${BASE_CSS}
+
+  /* Estilos específicos de cotización */
+  .quote-intro {
+    background: #f0fdf4; border: 1px solid #bbf7d0;
+    border-radius: 10px; padding: 16px; margin-bottom: 24px;
+    font-size: 13px; color: #166534; line-height: 1.6;
+  }
+
+  .price-block {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 16px; margin-bottom: 24px;
+  }
+  .price-card {
+    border-radius: 12px; padding: 20px;
+    border: 1px solid; text-align: center;
+  }
+  .price-card.main  { background: #f0fdf4; border-color: #86efac; }
+  .price-card.alt   { background: #eff6ff; border-color: #bfdbfe; }
+  .price-card-label { font-size: 10px; text-transform: uppercase;
+                      color: #64748b; margin-bottom: 8px; letter-spacing: 0.05em; }
+  .price-card-value { font-size: 26px; font-weight: 800; }
+  .price-card.main .price-card-value { color: #16a34a; }
+  .price-card.alt  .price-card-value { color: #2563eb; }
+  .price-card-sub   { font-size: 11px; color: #64748b; margin-top: 4px; }
+
+  .detail-table { margin-bottom: 24px; }
+  .detail-table table { border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+  .detail-table th { background: #f8fafc; }
+
+  .conditions {
+    background: #fefce8; border: 1px solid #fef08a;
+    border-radius: 10px; padding: 16px; margin-bottom: 24px;
+  }
+  .conditions-title { font-size: 11px; font-weight: 700;
+                       text-transform: uppercase; color: #854d0e; margin-bottom: 10px; }
+  .conditions ul { padding-left: 18px; }
+  .conditions li { font-size: 12px; color: #713f12; line-height: 1.7; }
+
+  .signature-block {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 40px; margin-top: 40px; padding-top: 20px;
+    border-top: 1px solid #e2e8f0;
+  }
+  .sig-line { border-top: 1px solid #94a3b8; margin-top: 40px; padding-top: 6px; }
+  .sig-label { font-size: 10px; color: #64748b; text-align: center; }
+</style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()">Guardar como PDF / Imprimir</button>
+
+${buildCompanyHeader(company)}
+
+<div class="doc-header">
+  <div class="doc-title">
+    <h1>Cotización${budget.number ? ' #' + budget.number : ''}</h1>
+    <p><strong>Descripción:</strong> ${d.name || '—'}</p>
+    <p>Fecha de emisión: ${budgetDate}</p>
+    <p>Tasa de cambio referencial: Bs. ${formatVE(s.exchangeRate)} / $</p>
+  </div>
+  <div class="doc-badge quote">Cotización</div>
+</div>
+
+<div class="quote-intro">
+  Estimado cliente, a continuación le presentamos nuestra cotización para el servicio/producto
+  indicado. Los precios están expresados en dólares estadounidenses (USD) y en bolívares (Bs.)
+  a la tasa referencial del día de emisión.
+</div>
+
+<!-- Precio destacado -->
+<div class="price-block">
+  <div class="price-card main">
+    <div class="price-card-label">Precio por ${s.saleUnit} (con IVA ${d.vatPct}%)</div>
+    <div class="price-card-value">$ ${formatVE(s.finalPriceUSD)}</div>
+    <div class="price-card-sub">Bs. ${formatVE(s.finalPriceBS)}</div>
+  </div>
+  <div class="price-card alt">
+    <div class="price-card-label">Precio sin IVA</div>
+    <div class="price-card-value">$ ${formatVE(s.salePriceWithoutVatUSD)}</div>
+    <div class="price-card-sub">Bs. ${formatVE(s.salePriceWithoutVatBS)}</div>
+  </div>
+</div>
+
+<!-- Desglose de precio (solo lo que ve el cliente) -->
+<div class="detail-table">
+  <table>
+    <thead>
+      <tr>
+        <th>Concepto</th>
+        <th class="center">Cantidad</th>
+        <th class="right">Precio Unit. $</th>
+        <th class="right">Precio Unit. Bs.</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>${d.name || 'Producto/Servicio'}</td>
+        <td class="center">${s.lotQuantity} ${s.saleUnit}</td>
+        <td class="right">$ ${formatVE(s.salePriceWithoutVatUSD)}</td>
+        <td class="right">Bs. ${formatVE(s.salePriceWithoutVatBS)}</td>
+      </tr>
+      <tr>
+        <td>IVA (${d.vatPct}%)</td>
+        <td class="center">—</td>
+        <td class="right">$ ${formatVE(s.vatAmountUSD)}</td>
+        <td class="right">Bs. ${formatVE(s.vatAmountBS)}</td>
+      </tr>
+      <tr class="price-final">
+        <td><strong>Total a pagar</strong></td>
+        <td class="center">${s.lotQuantity} ${s.saleUnit}</td>
+        <td class="right">$ ${formatVE(s.finalPriceUSD * s.lotQuantity)}</td>
+        <td class="right">Bs. ${formatVE(s.finalPriceBS * s.lotQuantity)}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Condiciones -->
+<div class="conditions">
+  <div class="conditions-title">📋 Condiciones de la Cotización</div>
+  <ul>
+    <li>Esta cotización tiene una vigencia de <strong>15 días</strong> a partir de la fecha de emisión.</li>
+    <li>Los precios están sujetos a variación según la tasa de cambio vigente al momento del pago.</li>
+    <li>El IVA del ${d.vatPct}% está incluido en el precio final indicado.</li>
+    <li>Para confirmar el pedido se requiere un <strong>50% de anticipo</strong>.</li>
+  </ul>
+</div>
+
+<!-- Firma -->
+<div class="signature-block">
+  <div>
+    <div class="sig-line"></div>
+    <div class="sig-label">${company?.name || 'Proveedor'} — Firma y Sello</div>
+  </div>
+  <div>
+    <div class="sig-line"></div>
+    <div class="sig-label">Cliente — Acepto las condiciones</div>
+  </div>
+</div>
+
+<div class="footer" style="margin-top: 24px;">
+  <span>${company?.name ? company.name : 'FlowCost'}</span>
+  <span>Emitido el ${today}</span>
+</div>
+
+</body>
+</html>`;
+}
+
+// ─── Función compartida de exportación ───────────────────────────────────────
+
+async function exportHtml(html: string, filename: string): Promise<void> {
   if (Platform.OS === 'web') {
     const win = window.open('', '_blank');
     if (!win) throw new Error('El navegador bloqueó la ventana emergente. Permite pop-ups para esta pagina.');
@@ -343,10 +507,30 @@ export async function exportBudgetPDF(
   if (canShare) {
     await Sharing.shareAsync(result.uri, {
       mimeType: 'application/pdf',
-      dialogTitle: `Exportar: ${budget.name}`,
+      dialogTitle: filename,
       UTI: 'com.adobe.pdf',
     });
   } else {
     await Print.printAsync({ uri: result.uri });
   }
+}
+
+// ─── Exports públicos ─────────────────────────────────────────────────────────
+
+/** PDF interno con todos los costos — para uso del productor */
+export async function exportBudgetPDF(
+  budget: Budget,
+  company: CompanyProfile | null = null,
+): Promise<void> {
+  const html = buildInternalHtml(budget, company);
+  await exportHtml(html, `Presupuesto: ${budget.name}`);
+}
+
+/** PDF cotización para el cliente — sin costos internos ni margen */
+export async function exportClientQuotePDF(
+  budget: Budget,
+  company: CompanyProfile | null = null,
+): Promise<void> {
+  const html = buildClientQuoteHtml(budget, company);
+  await exportHtml(html, `Cotización: ${budget.name}`);
 }

@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { TextInput, StyleSheet } from 'react-native';
+import { TextInput, StyleSheet, Platform } from 'react-native';
 import { YStack, XStack, SizableText } from 'tamagui';
 import { useThemeContext } from '../../state/themeContext';
 import type { InputCustomProps } from './interface';
@@ -11,7 +11,7 @@ export function formatVE(value: number, decimals = 2): string {
   const fixed = value.toFixed(decimals);
   const [int, dec] = fixed.split('.');
   const intFormatted = int.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  return intFormatted + ',' + dec;
+  return decimals === 0 ? intFormatted : intFormatted + ',' + dec;
 }
 
 export function parseVE(formatted: string): number {
@@ -58,6 +58,8 @@ const COLORS = {
   },
 };
 
+const INPUT_HEIGHT = 48;
+
 export default function InputCustom({
   label,
   placeholder,
@@ -74,8 +76,6 @@ export default function InputCustom({
   secureTextEntry,
   textContentType,
 }: InputCustomProps) {
-  // useThemeContext ya no lanza error si no hay provider —
-  // devuelve { theme: 'light' } por defecto (funciona en portales de Sheet)
   const { theme } = useThemeContext();
   const c = COLORS[theme];
 
@@ -111,6 +111,7 @@ export default function InputCustom({
 
   const hasError = !!error;
   const borderColor = hasError ? c.borderError : focused ? c.borderFocus : c.border;
+  const borderWidth = focused ? 2 : 1.5;
 
   return (
     <YStack gap={4}>
@@ -121,13 +122,17 @@ export default function InputCustom({
       )}
 
       <XStack
-        borderWidth={focused ? 2 : 1.5}
         borderRadius="$3"
         alignItems="center"
         paddingHorizontal="$3"
-        height="$5"
         gap="$2"
-        style={{ borderColor, backgroundColor: disabled ? c.bgDisabled : c.bg }}
+        style={{
+          borderColor,
+          borderWidth,
+          backgroundColor: disabled ? c.bgDisabled : c.bg,
+          height: INPUT_HEIGHT,
+          minHeight: INPUT_HEIGHT,
+        }}
       >
         {prefix && (
           <SizableText size="$3" fontWeight="500" style={{ color: c.prefix }}>
@@ -137,7 +142,10 @@ export default function InputCustom({
 
         <TextInput
           ref={inputRef}
-          style={[styles.input, { color: disabled ? c.placeholder : c.text }]}
+          style={[
+            styles.input,
+            { color: disabled ? c.placeholder : c.text },
+          ]}
           placeholder={placeholder}
           placeholderTextColor={c.placeholder}
           value={value}
@@ -172,7 +180,16 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
+    // Elimina todo el padding interno que Android agrega por defecto
     paddingVertical: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
+    margin: 0,
     fontFamily: 'Inter-Regular',
+    // Android: centra verticalmente y elimina el espacio de fuente interno
+    textAlignVertical: 'center',
+    ...(Platform.OS === 'android' && {
+      includeFontPadding: false,
+    }),
   },
 });

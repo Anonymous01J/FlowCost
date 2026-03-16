@@ -1,33 +1,110 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Animated, Pressable, ActivityIndicator } from 'react-native';
 import { YStack, XStack, SizableText, Card } from 'tamagui';
-import { Info } from '@tamagui/lucide-icons';
+import { Info, RefreshCw } from '@tamagui/lucide-icons';
 import type { BudgetFormData } from '../types';
 import { SALE_UNIT_OPTIONS } from '../types';
 import { OptionSheet, SelectTrigger } from './OptionSheet';
 import InputCustom, { formatVE, parseVE } from '../../../components/ui/InputCustom';
+import { useThemeContext } from '../../../state/themeContext';
 
 interface Props {
   data: BudgetFormData;
   onChange: (updates: Partial<BudgetFormData>) => void;
 }
 
-export function Step1GeneralData({ data, onChange }: Props) {
-  const [saleUnitSheetOpen, setSaleUnitSheetOpen] = useState(false);
+// ─── Botón BCV con animación de rotación ──────────────────────────────────────
 
-  // Convierte un número a string formateado venezolano para mostrarlo en el input
-  const toDisplay = (n: number) => n > 0 ? formatVE(n) : '';
+function BcvButton({
+  onFetch,
+  loading,
+}: {
+  onFetch: () => void;
+  loading: boolean;
+}) {
+  const { theme } = useThemeContext();
+  const rotation = useRef(new Animated.Value(0)).current;
+  const loopRef  = useRef<Animated.CompositeAnimation | null>(null);
 
-  // Strings que se muestran en pantalla — se sincronizan cuando cambia `data`
-  // (importante para el modo edición, donde data llega precargado desde fuera)
-  const [displays, setDisplays] = useState({
-    exchangeRate:   toDisplay(data.exchangeRate),
-    profitMarginPct: toDisplay(data.profitMarginPct),
-    lotQuantity:    data.lotQuantity > 0 ? String(data.lotQuantity) : '',
-    vatPct:         toDisplay(data.vatPct),
+  // Arranca la animación de giro infinito cuando loading=true,
+  // la detiene suavemente cuando loading=false
+  useEffect(() => {
+    if (loading) {
+      rotation.setValue(0);
+      loopRef.current = Animated.loop(
+        Animated.timing(rotation, {
+          toValue: 1,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+      );
+      loopRef.current.start();
+    } else {
+      loopRef.current?.stop();
+      // Completa la vuelta hasta 0 para que no quede a medias
+      Animated.timing(rotation, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [loading]);
+
+  const rotate = rotation.interpolate({
+    inputRange:  [0, 1],
+    outputRange: ['0deg', '360deg'],
   });
 
-  // Cuando data cambia desde el exterior (p.ej. al abrir en modo edición),
-  // re-sincroniza los displays para que los inputs muestren los valores correctos
+  const isDark   = theme === 'dark';
+  const bg       = isDark ? '#1e3a5f' : '#eff6ff';
+  const border   = isDark ? '#2563eb' : '#bfdbfe';
+  const iconColor = loading
+    ? (isDark ? '#60a5fa' : '#93c5fd')
+    : '#2563eb';
+
+  return (
+    <Pressable
+      onPress={loading ? undefined : onFetch}
+      style={{
+        height: 48,
+        paddingHorizontal: 10,
+        borderRadius: 8,
+        borderWidth: 1.5,
+        borderColor: border,
+        backgroundColor: bg,
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: loading ? 0.8 : 1,
+        flexDirection: 'row',
+        gap: 4,
+      }}
+    >
+      <Animated.View style={{ transform: [{ rotate }] }}>
+        <RefreshCw size={16} color={iconColor} />
+      </Animated.View>
+      <SizableText size="$1" style={{ color: iconColor, fontFamily: 'Inter-SemiBold' }}>
+        BCV
+      </SizableText>
+    </Pressable>
+  );
+}
+
+// ─── Step1GeneralData ─────────────────────────────────────────────────────────
+
+export function Step1GeneralData({ data, onChange }: Props) {
+  const [saleUnitSheetOpen, setSaleUnitSheetOpen] = useState(false);
+  const [bcvLoading, setBcvLoading]               = useState(false);
+  const [bcvError,   setBcvError]                 = useState<string | null>(null);
+
+  const toDisplay = (n: number) => n > 0 ? formatVE(n) : '';
+
+  const [displays, setDisplays] = useState({
+    exchangeRate:    toDisplay(data.exchangeRate),
+    profitMarginPct: toDisplay(data.profitMarginPct),
+    lotQuantity:     data.lotQuantity > 0 ? String(data.lotQuantity) : '',
+    vatPct:          toDisplay(data.vatPct),
+  });
+
   useEffect(() => {
     setDisplays({
       exchangeRate:    toDisplay(data.exchangeRate),
@@ -35,14 +112,28 @@ export function Step1GeneralData({ data, onChange }: Props) {
       lotQuantity:     data.lotQuantity > 0 ? String(data.lotQuantity) : '',
       vatPct:          toDisplay(data.vatPct),
     });
-  }, [
-    // Solo re-sync si los valores reales del modelo cambian desde fuera.
-    // Usar los valores numéricos, no el objeto completo, para evitar loops.
-    data.exchangeRate,
-    data.profitMarginPct,
-    data.lotQuantity,
-    data.vatPct,
-  ]);
+  }, [data.exchangeRate, data.profitMarginPct, data.lotQuantity, data.vatPct]);
+
+  // ─── Fetch tasa BCV ───────────────────────────────────────────────────────
+  const fetchBCV = async () => {
+    setBcvLoading(true);
+    setBcvError(null);
+    try {
+      const res = await fetch('https://ve.dolarapi.com/v1/dolares');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      // /v1/dolares → array de tipos, el BCV (oficial) es el índice 0
+      const rate: number = json[0]?.promedio;
+      if (!rate || isNaN(rate)) throw new Error('Respuesta inesperada de la API');
+      const formatted = formatVE(rate);
+      setDisplays(d => ({ ...d, exchangeRate: formatted }));
+      onChange({ exchangeRate: rate });
+    } catch (e: any) {
+      setBcvError('No se pudo obtener la tasa. Inténtalo de nuevo.');
+    } finally {
+      setBcvLoading(false);
+    }
+  };
 
   const selectedSaleUnitLabel =
     SALE_UNIT_OPTIONS.find((o) => o.value === data.saleUnit)?.label ?? data.saleUnit;
@@ -63,16 +154,31 @@ export function Step1GeneralData({ data, onChange }: Props) {
       />
 
       <XStack gap="$3" flexWrap="wrap">
+
+        {/* Tasa de cambio + botón BCV */}
         <YStack flex={1} minWidth={140}>
-          <InputCustom
-            label="Tasa de Cambio (Bs./$)"
-            placeholder="0,00"
-            variant="price"
-            prefix="Bs."
-            value={displays.exchangeRate}
-            onChangeText={(t) => setDisplays(d => ({ ...d, exchangeRate: t }))}
-            onChangeValue={(n) => onChange({ exchangeRate: n })}
-          />
+          <SizableText size="$2" fontWeight="500" color="$colorSubtitle" marginBottom="$1">
+            Tasa de Cambio (Bs./$)
+          </SizableText>
+          <XStack gap="$2" alignItems="flex-end">
+            <YStack flex={1}>
+              <InputCustom
+                placeholder="0,00"
+                variant="price"
+                prefix="Bs."
+                value={displays.exchangeRate}
+                onChangeText={(t) => setDisplays(d => ({ ...d, exchangeRate: t }))}
+                onChangeValue={(n) => onChange({ exchangeRate: n })}
+              />
+            </YStack>
+            <BcvButton onFetch={fetchBCV} loading={bcvLoading} />
+          </XStack>
+          {/* Mensaje de error debajo del campo */}
+          {bcvError && (
+            <SizableText size="$1" color="$red9" marginTop="$1">
+              {bcvError}
+            </SizableText>
+          )}
         </YStack>
 
         <YStack flex={1} minWidth={140}>
@@ -139,7 +245,8 @@ export function Step1GeneralData({ data, onChange }: Props) {
         <XStack gap="$3" alignItems="flex-start">
           <Info size={16} color="$blue9" marginTop={2} />
           <SizableText size="$2" color="$blue10" flex={1}>
-            La tasa de cambio se aplicará automáticamente en todos los cálculos de Bs.
+            Pulsa <SizableText size="$2" color="$blue10" fontWeight="700">BCV</SizableText> para
+            obtener la tasa oficial del Banco Central de Venezuela automáticamente.
           </SizableText>
         </XStack>
       </Card>
