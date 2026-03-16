@@ -13,13 +13,22 @@ interface ThemeContextType {
   toggleTheme: () => void;
 }
 
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+// Valor por defecto — usado cuando el contexto no está montado todavía
+// (ej: portales de Sheet/Modal que se renderizan fuera del árbol)
+// En lugar de lanzar un error, devuelve 'light' silenciosamente
+const DEFAULT_CONTEXT: ThemeContextType = {
+  theme: 'light',
+  mode: 'system',
+  setMode: () => {},
+  toggleTheme: () => {},
+};
+
+const ThemeContext = createContext<ThemeContextType>(DEFAULT_CONTEXT);
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const systemColorScheme = useColorScheme();
   const [mode, setModeState] = useState<ThemeMode>('system');
 
-  // Carga la preferencia guardada al arrancar
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY)
       .then(saved => {
@@ -27,10 +36,9 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
           setModeState(saved);
         }
       })
-      .catch(() => {}); // si falla, queda 'system' por defecto
+      .catch(() => {});
   }, []);
 
-  // Persiste el modo cada vez que cambia
   const setMode = (newMode: ThemeMode) => {
     setModeState(newMode);
     AsyncStorage.setItem(STORAGE_KEY, newMode).catch(() => {});
@@ -52,8 +60,6 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-export const useThemeContext = () => {
-  const context = useContext(ThemeContext);
-  if (!context) throw new Error('useThemeContext debe usarse dentro de ThemeProvider');
-  return context;
-};
+// Ya no lanza error — devuelve el valor por defecto si no hay provider
+// Esto permite que InputCustom funcione dentro de portales de Sheet/Modal
+export const useThemeContext = () => useContext(ThemeContext);

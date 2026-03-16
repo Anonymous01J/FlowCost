@@ -264,12 +264,13 @@ const s = StyleSheet.create({
     fontFamily: 'Inter-Bold',
     color: C.slate, textAlign: 'center',
     marginBottom: 8, lineHeight: 28,
+    marginTop: 28,
   },
   subtitle: {
     fontSize: 15, color: C.gray,
     fontFamily: 'Inter-Regular',
     textAlign: 'center', lineHeight: 23,
-    paddingHorizontal: 8,
+    paddingHorizontal: 16,
   },
 
   // Botones

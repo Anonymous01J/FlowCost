@@ -31,7 +31,8 @@ function formatPriceInput(raw: string): string {
   return formatted + ',' + decPart;
 }
 
-// ─── Tokens de color por tema ─────────────────────────────────────────────────
+// ─── Tokens de color ──────────────────────────────────────────────────────────
+
 const COLORS = {
   light: {
     text:        '#0f172a',
@@ -73,9 +74,10 @@ export default function InputCustom({
   secureTextEntry,
   textContentType,
 }: InputCustomProps) {
-  // Usa el tema de la app, no el del sistema operativo
+  // useThemeContext ya no lanza error si no hay provider —
+  // devuelve { theme: 'light' } por defecto (funciona en portales de Sheet)
   const { theme } = useThemeContext();
-  const c = theme === 'dark' ? COLORS.dark : COLORS.light;
+  const c = COLORS[theme];
 
   const [focused, setFocused] = useState(false);
   const inputRef = useRef<TextInput>(null);
