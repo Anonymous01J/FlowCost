@@ -1,9 +1,9 @@
-import { Head, Stack } from 'expo-router';
+import { Stack } from 'expo-router';
 import { TamaguiProvider, Theme } from 'tamagui';
 import { useFonts } from 'expo-font';
 import { useEffect, useState } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
-import { View } from 'react-native';
+import { View, Platform } from 'react-native';
 import config from '../tamagui.config';
 
 import { ThemeProvider, useThemeContext } from '../src/state/themeContext';
@@ -14,6 +14,30 @@ import FlowCostOnboarding from '../src/features/onboarding/FlowCostOnboarding';
 import FlowCostSplash from '../src/components/ui/SplashScreen';
 
 SplashScreen.preventAutoHideAsync();
+
+// SEO para web — sin usar <Head> de expo-router (causa React error #130 en producción)
+function WebSEO() {
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    document.title = 'FlowCost — Calcula tus costos. Fija tu precio.';
+    const setMeta = (name: string, content: string, isOg = false) => {
+      const attr = isOg ? 'property' : 'name';
+      let el = document.querySelector(`meta[${attr}="${name}"]`) as HTMLMetaElement | null;
+      if (!el) {
+        el = document.createElement('meta');
+        el.setAttribute(attr, name);
+        document.head.appendChild(el);
+      }
+      el.setAttribute('content', content);
+    };
+    setMeta('description', 'Calcula los costos de tus productos, fija tu precio de venta y genera cotizaciones en PDF para tus clientes. Ideal para emprendedores y pequeños negocios.');
+    setMeta('keywords', 'FlowCost, presupuesto, cotización, costos, precio de venta, negocios, emprendedores');
+    setMeta('og:title', 'FlowCost — Calcula tus costos. Fija tu precio.', true);
+    setMeta('og:description', 'Genera presupuestos y cotizaciones profesionales en PDF.', true);
+    setMeta('og:type', 'website', true);
+  }, []);
+  return null;
+}
 
 function TamaguiThemeSync({ children }: { children: React.ReactNode }) {
   const { theme } = useThemeContext();
@@ -32,7 +56,6 @@ function AppContent() {
 
   if (loading) return null;
 
-  // Muestra el splash animado primero, siempre (primera apertura o regreso)
   if (!splashDone) {
     return <FlowCostSplash onFinish={() => setSplashDone(true)} />;
   }
@@ -68,25 +91,19 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <>
-      <Head>
-        <title>FlowCost - Calcula tus Costos y Genera Cotizaciones Fácilmente</title>
-        <meta name="description" content="Con FlowCost, puedes calcular los costos de tus productos, determinar precios de venta y generar cotizaciones en PDF para tus clientes. Ideal para emprendedores y pequeños negocios." />
-        <meta name="keywords" content="FlowCost, presupuesto, cotización, calcular costos, precio de venta, negocios, emprendedores, materia prima, mano de obra, costos indirectos, ganancia, PDF" />
-      </Head>
-      <TamaguiProvider config={config} defaultTheme="light">
-        <ThemeProvider>
-          <TamaguiThemeSync>
-            <OnboardingProvider>
-              <CompanyProvider>
-                <BudgetsProvider>
-                  <AppContent />
-                </BudgetsProvider>
-              </CompanyProvider>
-            </OnboardingProvider>
-          </TamaguiThemeSync>
-        </ThemeProvider>
-      </TamaguiProvider>
-    </>
+    <TamaguiProvider config={config} defaultTheme="light">
+      <ThemeProvider>
+        <TamaguiThemeSync>
+          <WebSEO />
+          <OnboardingProvider>
+            <CompanyProvider>
+              <BudgetsProvider>
+                <AppContent />
+              </BudgetsProvider>
+            </CompanyProvider>
+          </OnboardingProvider>
+        </TamaguiThemeSync>
+      </ThemeProvider>
+    </TamaguiProvider>
   );
 }

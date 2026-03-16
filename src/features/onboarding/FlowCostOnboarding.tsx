@@ -1,12 +1,15 @@
 /**
  * FlowCostOnboarding.tsx
- * Onboarding propio — FlatList directo para garantizar SVGs en Android.
- * Soporta modo claro/oscuro via useThemeContext.
+ * Fixes para web:
+ * - tip y subtitle con maxWidth: W * 0.85 (antes 35% / 30% — ilegible en web)
+ * - scrollEnabled habilitado (funciona en web con onMomentumScrollEnd)
+ * - gap en StyleSheet reemplazado por marginBottom para react-native-web 0.21
  */
 import React, { useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, Pressable,
   Dimensions, FlatList, SafeAreaView,
+  NativeSyntheticEvent, NativeScrollEvent,
 } from 'react-native';
 import Svg, {
   Circle, Rect, Line, Polyline, G, Text as SvgText,
@@ -17,7 +20,6 @@ import { useThemeContext } from '../../state/themeContext';
 const { width: W } = Dimensions.get('window');
 const SVG_SIZE = Math.min(160, W * 0.42);
 
-// ─── Colores de acento (fijos, independientes del tema) ───────────────────────
 const A = {
   blue:   '#2563eb', blue2:  '#eff6ff', blue3: '#bfdbfe',
   green:  '#16a34a', green2: '#f0fdf4', green3: '#bbf7d0',
@@ -27,7 +29,6 @@ const A = {
   teal:   '#0891b2', teal2:  '#ecfeff', teal3: '#a5f3fc',
 };
 
-// ─── Colores dependientes del tema ────────────────────────────────────────────
 type TC = {
   bg: string; text: string; subtitle: string;
   border: string; footerBg: string;
@@ -67,34 +68,26 @@ function IlluBienvenida({ tc }: { tc: TC }) {
   );
 }
 
-// Paso 0 — Datos generales (nombre, tasa, margen, IVA, unidad)
 function IlluDatosGenerales({ tc }: { tc: TC }) {
   return (
     <Svg width={SVG_SIZE} height={SVG_SIZE} viewBox="0 0 200 200">
       <Rect x={10} y={10} width={180} height={180} rx={24} fill={A.teal2} />
-      {/* Formulario */}
       <Rect x={28} y={28} width={144} height={144} rx={12} fill={tc.svgWhite} stroke={A.teal3} strokeWidth={1.5} />
-      {/* Campo nombre */}
       <SvgText x={40} y={54} fill={tc.svgGray} fontSize={8} opacity={0.7}>Nombre del presupuesto</SvgText>
       <Rect x={40} y={58} width={120} height={14} rx={4} fill={A.teal2} stroke={A.teal} strokeWidth={1} />
       <SvgText x={46} y={69} fill={A.teal} fontSize={8}>Lote Marzo 2026</SvgText>
-      {/* Campo tasa */}
       <SvgText x={40} y={88} fill={tc.svgGray} fontSize={8} opacity={0.7}>Tasa de cambio (Bs./$)</SvgText>
       <Rect x={40} y={92} width={55} height={14} rx={4} fill={tc.svgWhite} stroke={A.teal3} strokeWidth={1} />
       <SvgText x={46} y={103} fill={tc.svgGray} fontSize={8}>Bs. 36,50</SvgText>
-      {/* Campo margen */}
       <SvgText x={103} y={88} fill={tc.svgGray} fontSize={8} opacity={0.7}>Ganancia</SvgText>
       <Rect x={103} y={92} width={57} height={14} rx={4} fill={tc.svgWhite} stroke={A.teal3} strokeWidth={1} />
       <SvgText x={109} y={103} fill={A.green} fontSize={8} fontWeight="bold">30 %</SvgText>
-      {/* Campo IVA */}
       <SvgText x={40} y={122} fill={tc.svgGray} fontSize={8} opacity={0.7}>IVA</SvgText>
       <Rect x={40} y={126} width={55} height={14} rx={4} fill={tc.svgWhite} stroke={A.teal3} strokeWidth={1} />
       <SvgText x={46} y={137} fill={tc.svgGray} fontSize={8}>16 %</SvgText>
-      {/* Campo cantidad lote */}
       <SvgText x={103} y={122} fill={tc.svgGray} fontSize={8} opacity={0.7}>Cantidad lote</SvgText>
       <Rect x={103} y={126} width={57} height={14} rx={4} fill={tc.svgWhite} stroke={A.teal3} strokeWidth={1} />
       <SvgText x={109} y={137} fill={tc.svgGray} fontSize={8}>50 unid.</SvgText>
-      {/* Botón siguiente */}
       <Rect x={40} y={150} width={120} height={14} rx={7} fill={A.teal} />
       <SvgText x={100} y={161} textAnchor="middle" fill="white" fontSize={8} fontWeight="bold">Siguiente →</SvgText>
     </Svg>
@@ -204,7 +197,7 @@ function IlluEmpresa({ tc }: { tc: TC }) {
   );
 }
 
-// ─── Datos de páginas ─────────────────────────────────────────────────────────
+// ─── Páginas ──────────────────────────────────────────────────────────────────
 
 interface Page {
   Illu: React.ComponentType<{ tc: TC }>;
@@ -216,64 +209,56 @@ interface Page {
 
 const PAGES: Page[] = [
   {
-    Illu: IlluBienvenida,
-    accent: A.blue,
+    Illu: IlluBienvenida, accent: A.blue,
     tip: 'Pulsa el botón azul + para crear tu primer presupuesto.',
     title: '¡Bienvenido a FlowCost!',
     subtitle: 'Aquí verás todos tus presupuestos guardados. Podrás buscarlos, filtrarlos y ver cuánto has cotizado en total.',
   },
   {
-    Illu: IlluDatosGenerales,
-    accent: A.teal,
+    Illu: IlluDatosGenerales, accent: A.teal,
     tip: 'La tasa de cambio convierte automáticamente todos tus precios a bolívares.',
     title: 'Primero, los datos base',
     subtitle: 'Ponle nombre al presupuesto, indica cuántas unidades vas a producir (el "lote"), tu porcentaje de ganancia, el IVA y la tasa Bs./$. Todo lo demás se calcula solo.',
   },
   {
-    Illu: IlluMP,
-    accent: A.amber,
+    Illu: IlluMP, accent: A.amber,
     tip: 'Si el precio de un insumo cambia, puedes editar el presupuesto después.',
     title: 'Paso 1: ¿Qué necesitas para producir?',
     subtitle: 'Anota cada ingrediente, material o envase que uses. Por ejemplo: harina, tela, frascos. Indica cuánto usas y cuánto cuesta cada uno en dólares.',
   },
   {
-    Illu: IlluMO,
-    accent: A.purple,
+    Illu: IlluMO, accent: A.purple,
     tip: '¡Tu propio tiempo tiene valor! No lo regales — ponle precio.',
     title: 'Paso 2: ¿Quién trabaja en esto?',
     subtitle: 'Incluye a todas las personas que participan, incluyéndote a ti. Indica cuánto cobran por hora, día o mes y cuánto tiempo trabajaron en este lote.',
   },
   {
-    Illu: IlluCIF,
-    accent: A.orange,
+    Illu: IlluCIF, accent: A.orange,
     tip: 'Truco: divide el alquiler mensual entre los lotes que produces ese mes.',
     title: 'Paso 3: Los gastos del negocio',
     subtitle: 'Luz, agua, alquiler, internet — gastos que pagas aunque no estés produciendo. Son parte del costo real de tu producto y deben incluirse.',
   },
   {
-    Illu: IlluPrecio,
-    accent: A.green,
+    Illu: IlluPrecio, accent: A.green,
     tip: 'El 30% de ganancia es un buen punto de partida si no sabes por dónde empezar.',
     title: 'Paso 4: Tu precio de venta',
     subtitle: 'FlowCost suma todos tus costos, le agrega tu ganancia y calcula automáticamente el precio por unidad con y sin IVA.',
   },
   {
-    Illu: IlluCotizacion,
-    accent: A.green,
+    Illu: IlluCotizacion, accent: A.green,
     tip: 'La cotización no muestra tus costos internos — solo lo que el cliente necesita ver.',
     title: 'Envíale una cotización a tu cliente',
     subtitle: 'Desde el menú de cada presupuesto puedes generar un PDF listo para compartir: con tu logo, precio final y espacio para firma. Sin revelar tus costos.',
   },
   {
-    Illu: IlluEmpresa,
-    accent: A.blue,
+    Illu: IlluEmpresa, accent: A.blue,
     tip: 'Pulsa "?" en el inicio para ver este tutorial de nuevo cuando quieras.',
     title: 'Dale tu toque profesional',
     subtitle: 'En la pestaña "Mi Empresa" agrega tu logo, RIF y teléfonos. Aparecerán en todos tus PDFs automáticamente.',
   },
 ];
 
-// ─── Slide individual ─────────────────────────────────────────────────────────
+// ─── Slide ────────────────────────────────────────────────────────────────────
 
 function Slide({ item, tc }: { item: Page; tc: TC }) {
   const { Illu, accent, tip, title, subtitle } = item;
@@ -330,7 +315,7 @@ export default function FlowCostOnboarding() {
     setCurrent(next);
   };
 
-  const handleMomentumScrollEnd = (e: any) => {
+  const handleMomentumScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const index = Math.round(e.nativeEvent.contentOffset.x / W);
     setCurrent(index);
   };
@@ -343,13 +328,13 @@ export default function FlowCostOnboarding() {
         keyExtractor={(_, i) => String(i)}
         horizontal
         pagingEnabled
-        scrollEnabled={false}
+        scrollEnabled
         showsHorizontalScrollIndicator={false}
         initialNumToRender={PAGES.length}
         windowSize={PAGES.length}
-        onMomentumScrollEnd={handleMomentumScrollEnd}
         getItemLayout={(_, index) => ({ length: W, offset: W * index, index })}
         renderItem={({ item }) => <Slide item={item} tc={tc} />}
+        onMomentumScrollEnd={handleMomentumScrollEnd}
       />
 
       <View style={[s.footer, { backgroundColor: tc.footerBg, borderTopColor: tc.border }]}>
@@ -380,12 +365,13 @@ const s = StyleSheet.create({
     paddingHorizontal: 28,
     paddingTop: 16,
     paddingBottom: 8,
-    gap: 16,
+    // gap eliminado — usar marginBottom en hijos
   },
 
   illuZone: {
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 16,
   },
 
   tip: {
@@ -393,8 +379,10 @@ const s = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 8,
+    // CORREGIDO: era W * 0.30 / 35% — ilegible en web
     maxWidth: W * 0.85,
-    width: '35%',
+    width: '100%',
+    marginBottom: 16,
   },
   tipTxt: {
     fontSize: 13,
@@ -409,13 +397,16 @@ const s = StyleSheet.create({
     fontFamily: 'Inter-Bold',
     textAlign: 'center',
     lineHeight: 28,
+    marginBottom: 16,
   },
+
   subtitle: {
     fontSize: 14,
     fontFamily: 'Inter-Regular',
     textAlign: 'center',
     lineHeight: 22,
-    maxWidth: W * 0.30,
+    // CORREGIDO: era W * 0.30 — muy angosto en web
+    maxWidth: W * 0.85,
   },
 
   footer: {
@@ -427,18 +418,32 @@ const s = StyleSheet.create({
     borderTopWidth: 1,
   },
 
-  dots: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  dot:  { height: 6, borderRadius: 3 },
+  dots: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    // gap no soportado en RN web 0.21 — usar marginRight en dot
+  },
+  dot: {
+    height: 6,
+    borderRadius: 3,
+    marginRight: 6,
+  },
 
   skipBtn: { paddingVertical: 10, paddingHorizontal: 16, minWidth: 72 },
   skipTxt: { fontSize: 15, fontFamily: 'Inter-Regular', textAlign: 'center' },
 
   nextBtn: {
-    paddingVertical: 12, paddingHorizontal: 20,
-    borderRadius: 12, backgroundColor: A.blue, minWidth: 72,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: A.blue,
+    minWidth: 72,
   },
   nextTxt: {
-    fontSize: 15, fontWeight: '700',
-    fontFamily: 'Inter-Bold', color: '#ffffff', textAlign: 'center',
+    fontSize: 15,
+    fontWeight: '700',
+    fontFamily: 'Inter-Bold',
+    color: '#ffffff',
+    textAlign: 'center',
   },
 });
