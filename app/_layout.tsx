@@ -1,22 +1,20 @@
 import { Stack } from 'expo-router';
 import { TamaguiProvider, Theme } from 'tamagui';
 import { useFonts } from 'expo-font';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 import { View } from 'react-native';
 import config from '../tamagui.config';
 
-// Un solo ThemeProvider — el de state/themeContext, sin intermediarios
 import { ThemeProvider, useThemeContext } from '../src/state/themeContext';
 import { BudgetsProvider } from '../src/store/BudgetsContext';
 import { CompanyProvider } from '../src/store/CompanyContext';
 import { OnboardingProvider, useOnboarding } from '../src/store/OnboardingContext';
 import FlowCostOnboarding from '../src/features/onboarding/FlowCostOnboarding';
+import FlowCostSplash from '../src/components/ui/SplashScreen';
 
 SplashScreen.preventAutoHideAsync();
 
-// Aplica el tema de Tamagui reactivamente — vive DENTRO de ThemeProvider
-// para que useThemeContext() siempre encuentre el contexto
 function TamaguiThemeSync({ children }: { children: React.ReactNode }) {
   const { theme } = useThemeContext();
   return (
@@ -30,8 +28,14 @@ function TamaguiThemeSync({ children }: { children: React.ReactNode }) {
 
 function AppContent() {
   const { hasSeenOnboarding, loading } = useOnboarding();
+  const [splashDone, setSplashDone] = useState(false);
 
   if (loading) return null;
+
+  // Muestra el splash animado primero, siempre (primera apertura o regreso)
+  if (!splashDone) {
+    return <FlowCostSplash onFinish={() => setSplashDone(true)} />;
+  }
 
   if (!hasSeenOnboarding) {
     return (
