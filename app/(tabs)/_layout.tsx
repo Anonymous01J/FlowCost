@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeContext } from '../../src/state/themeContext';
-import { FileText, Building2 } from 'lucide-react-native';
+import { FileText, Building2 } from '@tamagui/lucide-icons';
 
 export default function TabsLayout() {
   const { theme } = useThemeContext();
