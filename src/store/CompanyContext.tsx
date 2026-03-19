@@ -26,12 +26,39 @@ export function validateRIF(rif: string): boolean {
 
 /** Formatea RIF mientras se escribe: J12345678 → J-12345678-9 */
 export function formatRIF(raw: string): string {
+  // 1. Limpiamos y dejamos solo letras y números
   const clean = raw.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-  if (clean.length <= 1) return clean;
+  if (clean.length === 0) return '';
+  
+  // 2. Extraemos la letra inicial (V, J, G, E, P, C)
   const letter = clean[0];
+  if (clean.length === 1) return letter;
+
+  // 3. Extraemos solo los números siguientes
   const digits = clean.slice(1).replace(/\D/g, '');
-  if (digits.length <= 8) return `${letter}-${digits}`;
-  return `${letter}-${digits.slice(0, 8)}-${digits[8] ?? ''}`;
+
+  // 4. Aplicamos el formato según la cantidad de números:
+  // Si tiene 8 o menos, el guion va después de la letra: V-12345678
+  if (digits.length <= 8) {
+    return `${letter}-${digits}`;
+  }
+  
+  // Si tiene más de 8, el noveno dígito es el verificador: V-12345678-9
+  return `${letter}-${digits.slice(0, 8)}-${digits[8]}`;
+}
+export function formatPhoneForLink(phone: string): string {
+  // Elimina todo lo que no sea número
+  const clean = phone.replace(/\D/g, '');
+  
+  // Si no empieza por 58 (y asumimos que es Venezuela), se lo agregamos
+  if (clean.length === 10 && clean.startsWith('4')) { // ej: 4121234567
+     return `+58${clean}`;
+  }
+  if (clean.length === 11 && clean.startsWith('0')) { // ej: 04121234567
+     return `+58${clean.slice(1)}`;
+  }
+  
+  return `+${clean}`;
 }
 
 const DEFAULT_PROFILE: CompanyProfile = {

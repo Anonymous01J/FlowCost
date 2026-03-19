@@ -160,20 +160,27 @@ export function Step1GeneralData({ data, onChange }: Props) {
           <SizableText size="$2" fontWeight="500" color="$colorSubtitle" marginBottom="$1">
             Tasa de Cambio (Bs./$)
           </SizableText>
-          <XStack gap="$2" alignItems="flex-end">
+          <XStack gap="$2" alignItems="flex-end" width="100%">
+
             <YStack flex={1}>
+
               <InputCustom
                 placeholder="0,00"
                 variant="price"
-                prefix="Bs."
                 value={displays.exchangeRate}
                 onChangeText={(t) => setDisplays(d => ({ ...d, exchangeRate: t }))}
                 onChangeValue={(n) => onChange({ exchangeRate: n })}
               />
+
             </YStack>
-            <BcvButton onFetch={fetchBCV} loading={bcvLoading} />
+            
+            {/* El botón del BCV */}
+            <BcvButton 
+              onFetch={fetchBCV} 
+              loading={bcvLoading} 
+            />
           </XStack>
-          {/* Mensaje de error debajo del campo */}
+
           {bcvError && (
             <SizableText size="$1" color="$red9" marginTop="$1">
               {bcvError}
@@ -181,7 +188,7 @@ export function Step1GeneralData({ data, onChange }: Props) {
           )}
         </YStack>
 
-        <YStack flex={1} minWidth={140}>
+        <YStack flex={1} minWidth={130}>
           <InputCustom
             label="Utilidad / Margen"
             placeholder="0,00"

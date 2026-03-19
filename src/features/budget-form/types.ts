@@ -30,7 +30,7 @@ export interface Budget {
 }
 
 export const INITIAL_FORM_DATA: BudgetFormData = {
-  name: '', exchangeRate: 36.5, profitMarginPct: 30, lotQuantity: 1,
+  name: '', exchangeRate: 0.00, profitMarginPct: 30, lotQuantity: 1,
   vatPct: 16, saleUnit: 'unidad', customSaleUnit: '',
   rawMaterials: [], laborItems: [], indirectCosts: [],
 };

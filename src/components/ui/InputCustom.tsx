@@ -186,6 +186,12 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
     margin: 0,
     fontFamily: 'Inter-Regular',
+    // Estilos específicos para Web (Firebase Studio) para quitar el borde de enfoque nativo
+    ...(Platform.OS === 'web' && {
+      outlineWidth: 0,
+      outlineStyle: 'none',
+      outlineColor: 'transparent',
+    } as any),
     // Android: centra verticalmente y elimina el espacio de fuente interno
     textAlignVertical: 'center',
     ...(Platform.OS === 'android' && {

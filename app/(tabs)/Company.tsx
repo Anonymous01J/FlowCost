@@ -11,6 +11,7 @@ import {
 } from '@tamagui/lucide-icons';
 import {
   useCompany, validateRIF, formatRIF,
+  formatPhoneForLink,
   type CompanyProfile, type PhoneEntry,
 } from '../../src/store/CompanyContext';
 import InputCustom from '../../src/components/ui/InputCustom';
@@ -221,20 +222,28 @@ export default function CompanyScreen() {
           <InputCustom label="Email" placeholder="empresa@ejemplo.com"
             variant="text" value={form.email} onChangeText={v => update('email', v)}
             autoCapitalize="none" error={errors.email} />
-          {form.phones.map((phone, i) => (
-            <YStack key={i} gap="$2">
-              <SizableText size="$2" style={{ color: c.label }} fontWeight="500">Teléfono {i + 1}</SizableText>
-              <PhoneTypeToggle type={phone.type} onChange={t => updatePhone(i, 'type', t)} />
-              <InputCustom
-                placeholder={phone.type === 'whatsapp' ? '+58 414 000 0000' : '0212-000 0000'}
-                variant="text" value={phone.number} onChangeText={v => updatePhone(i, 'number', v)} />
-              <SizableText size="$1" color="$colorSubtitle">
-                {phone.type === 'call'
-                  ? 'Enlace: tel:' + (phone.number || '...')
-                  : 'Enlace: https://wa.me/' + (phone.number.replace(/\D/g, '') || '...')}
-              </SizableText>
-            </YStack>
-          ))}
+            {form.phones.map((phone, i) => (
+              <YStack key={i} gap="$2">
+                <SizableText size="$2" style={{ color: c.label }} fontWeight="500">
+                  Teléfono {i + 1}
+                </SizableText>
+                
+                <PhoneTypeToggle type={phone.type} onChange={t => updatePhone(i, 'type', t)} />
+                
+                <InputCustom
+                  placeholder={phone.type === 'whatsapp' ? '+58 414 000 0000' : '0253 000 0000'}
+                  variant="text" 
+                  value={phone.number} 
+                  onChangeText={v => updatePhone(i, 'number', v)} 
+                />
+
+                <SizableText size="$1" color="$colorSubtitle">
+                  {phone.type === 'call'
+                    ? `Enlace de llamada: tel:${formatPhoneForLink(phone.number)}`
+                    : `Enlace de chat: https://wa.me/${formatPhoneForLink(phone.number).replace('+', '')}`}
+                </SizableText>
+              </YStack>
+            ))}
         </Card>
 
         {/* Guardar */}

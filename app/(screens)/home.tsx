@@ -4,6 +4,7 @@ import { YStack, XStack, SizableText, Button, Card, Spinner } from 'tamagui';
 import {
   Plus, Moon, Sun, Search, SlidersHorizontal,
   DollarSign, TrendingUp, CheckSquare, FileText,
+  CircleHelp
 } from '@tamagui/lucide-icons';
 
 import { useThemeContext } from '../../src/state/themeContext';
@@ -137,16 +138,19 @@ export default function Home() {
           <SizableText size="$5" fontWeight="700" color="$color">FlowCost</SizableText>
         </XStack>
         <XStack gap="$2" alignItems="center">
-          <Button
-            size="$3" borderRadius="$3" chromeless
+          <Button 
+            circular
             onPress={showOnboarding}
-            borderWidth={1} borderColor="$borderColor"
-            backgroundColor="$backgroundStrong"
-            pressStyle={{ opacity: 0.7 }}
-            width={36} height={36} alignItems="center" justifyContent="center"
-          >
-            <SizableText size="$4" fontWeight="700" color="$colorSubtitle">?</SizableText>
-          </Button>
+            borderWidth={1} 
+            borderColor="$borderColor"
+            backgroundColor={theme === 'light' ? '$blue5' : '$purple5'}
+            pressStyle={{ scale: 0.9, opacity: 0.8 }}
+            width={36} 
+            height={36} 
+            alignItems="center" 
+            justifyContent="center"
+            icon={<CircleHelp size={20} color="$colorSubtitle" />}
+          />
           <Button circular size="$4" onPress={toggleTheme}
             pressStyle={{ scale: 0.9, opacity: 0.8 }}
             backgroundColor={theme === 'light' ? '$blue5' : '$purple5'}
@@ -265,7 +269,7 @@ export default function Home() {
           setIsCopyMode(false);
           setModalOpen(true);
         }}
-        pressStyle={{ scale: 0.95, opacity: 0.9 }}
+        pressStyle={{ scale: 0.95, opacity: 0.9, transform: [{ rotate: '45deg' }]}}
         elevation={4}
         icon={<Plus size={24} color="white" />}
       />
